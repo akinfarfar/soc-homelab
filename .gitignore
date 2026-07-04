@@ -19,4 +19,4 @@ secrets/**/*.log
 .vault_pass
 
 # Gerçek IP'ler ve altyapı bilgisi — repo public olacağı için asla commit edilmemeli
-ansible/group_vars/all/vault_ips.yml
+ansible/inventory/group_vars/all/vault_ips.yml

@@ -1,0 +1,6 @@
+---
+- name: T-Pot blacklist automation (as-code belgeleme)
+  hosts: tpot
+  become: true
+  roles:
+    - tpot_blacklist

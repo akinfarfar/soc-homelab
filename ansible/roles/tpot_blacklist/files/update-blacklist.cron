@@ -1,0 +1,1 @@
+0 3 * * * root /usr/local/bin/update-blacklist.sh >> /var/log/update-blacklist.log 2>&1

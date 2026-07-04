@@ -1,0 +1,38 @@
+---
+- name: Ensure ipset is installed
+  ansible.builtin.apt:
+    name: ipset
+    state: present
+
+- name: Validate update-blacklist.sh syntax before deploying
+  ansible.builtin.command:
+    cmd: "bash -n {{ role_path }}/files/update-blacklist.sh"
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: Deploy update-blacklist.sh
+  ansible.builtin.copy:
+    src: update-blacklist.sh
+    dest: /usr/local/bin/update-blacklist.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Deploy cron definition
+  ansible.builtin.copy:
+    src: update-blacklist.cron
+    dest: /etc/cron.d/update-blacklist
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure log file exists
+  ansible.builtin.file:
+    path: /var/log/update-blacklist.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+    modification_time: preserve
+    access_time: preserve
