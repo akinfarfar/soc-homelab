@@ -17,3 +17,6 @@ secrets/**/*.log
 # Ansible geçici/retry dosyaları
 *.retry
 .vault_pass
+
+# Gerçek IP'ler ve altyapı bilgisi — repo public olacağı için asla commit edilmemeli
+ansible/group_vars/all/vault_ips.yml

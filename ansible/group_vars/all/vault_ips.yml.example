@@ -1,0 +1,4 @@
+# Bu dosyayı vault_ips.yml olarak kopyala ve gerçek IP'lerinle doldur
+# cp vault_ips.yml.example vault_ips.yml
+tpot_public_ip: "203.0.113.10"
+wazuh_public_ip: "203.0.113.20"
