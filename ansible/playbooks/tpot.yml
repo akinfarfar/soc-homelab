@@ -1,6 +1,7 @@
 ---
-- name: T-Pot blacklist automation (as-code belgeleme)
+- name: T-Pot blacklist automation and active-response (as-code belgeleme)
   hosts: tpot
   become: true
   roles:
     - tpot_blacklist
+    - tpot_active_response

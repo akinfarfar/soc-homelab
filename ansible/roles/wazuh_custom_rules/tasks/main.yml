@@ -1,14 +1,18 @@
 ---
-- name: Validate local_rules.xml is well-formed XML
+- name: Validate local_rules.xml is well-formed (Wazuh allows multiple top-level <group> blocks, wrapped in fake root for validation)
   ansible.builtin.command:
-    cmd: "python3 -c \"import xml.etree.ElementTree as ET; ET.parse('{{ role_path }}/files/local_rules.xml')\""
+    cmd: >-
+      python3 -c "import xml.etree.ElementTree as ET;
+      ET.fromstring('<root>' + open('{{ role_path }}/files/local_rules.xml').read() + '</root>')"
   delegate_to: localhost
   become: false
   changed_when: false
 
-- name: Validate local_decoder.xml is well-formed XML
+- name: Validate local_decoder.xml is well-formed (same fake-root technique)
   ansible.builtin.command:
-    cmd: "python3 -c \"import xml.etree.ElementTree as ET; ET.parse('{{ role_path }}/files/local_decoder.xml')\""
+    cmd: >-
+      python3 -c "import xml.etree.ElementTree as ET;
+      ET.fromstring('<root>' + open('{{ role_path }}/files/local_decoder.xml').read() + '</root>')"
   delegate_to: localhost
   become: false
   changed_when: false
