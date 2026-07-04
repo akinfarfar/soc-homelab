@@ -1,0 +1,19 @@
+# Private age key'ler asla commit edilmemeli
+keys.txt
+*.key
+*-key.pem
+*.pem
+!root-ca.pem
+
+# SSH private key'ler
+ansible_control
+*_old.key
+
+# Şifrelenmemiş (plaintext) secret kalıntıları asla commit edilmemeli
+secrets/**/*.yaml.bak
+secrets/**/*.tar
+secrets/**/*.log
+
+# Ansible geçici/retry dosyaları
+*.retry
+.vault_pass
