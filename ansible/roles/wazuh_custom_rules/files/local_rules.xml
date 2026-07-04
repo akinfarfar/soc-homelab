@@ -1,0 +1,163 @@
+<!-- Local rules -->
+
+<!-- Modify it at your will. -->
+<!-- Copyright (C) 2015, Wazuh Inc. -->
+
+<!-- Example -->
+<group name="local,syslog,sshd,">
+
+  <!--
+  Dec 10 01:02:02 host sshd[1234]: Failed none for root from 1.1.1.1 port 1066 ssh2
+  -->
+  <rule id="100001" level="5">
+    <if_sid>5716</if_sid>
+    <srcip>1.1.1.1</srcip>
+    <description>sshd: authentication failed from IP 1.1.1.1.</description>
+    <group>authentication_failed,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+  </rule>
+
+</group>
+
+<group name="honeypot,h0neytr4p">
+  <rule id="100003" level="10">
+    <decoded_as>json</decoded_as>
+    <field name="dest_port">443</field>
+    <description>H0neytr4p: HTTPS scan detected from $(src_ip)</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+  </rule>
+
+  <rule id="100004" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="request_method">POST</field>
+    <description>H0neytr4p: POST request - possible exploit attempt from $(src_ip)</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+  </rule>
+</group>
+
+<group name="fortigate,firewall">
+
+  <rule id="100010" level="10" frequency="3" timeframe="60">
+    <if_matched_sid>81626</if_matched_sid>
+    <description>FortiGate: Multiple successful admin SSH logins from $(srcip)</description>
+    <group>fortigate,successful_admin_login,</group>
+  </rule>
+
+
+  <rule id="100020" level="12" frequency="3" timeframe="120">
+    <if_matched_sid>81606</if_matched_sid>
+    <same_srcip />
+    <description>
+      FortiGate: SSH brute force attack detected from $(srcip)
+    </description>
+    <group>fortigate,authentication_bruteforce,attack,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <rule id="100021" level="12">
+    <if_sid>81606</if_sid>
+    <field name="reason">exceed_limit</field>
+    <description>
+      FortiGate: Admin login blocked after excessive failures
+    </description>
+    <group>fortigate,authentication_bruteforce,attack,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <rule id="100022" level="14" frequency="2" timeframe="300">
+    <if_matched_sid>81606</if_matched_sid>
+    <same_srcip />
+    <if_sid>81626</if_sid>
+    <description>
+      FortiGate: Successful SSH login after brute force attempts from $(srcip)
+    </description>
+    <group>fortigate,account_compromise,authentication_success_after_failure,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+   </rule>
+
+   <rule id="100011" level="3">
+     <if_group>fortigate</if_group>
+     <field name="type" negate="yes">traffic</field>
+     <description>FortiGate: $(type)/$(subtype) - $(logdesc)</description>
+     <group>,fortigate_visibility,</group>
+   </rule>
+
+   <rule id="100013" level="3">
+     <if_group>fortigate</if_group>
+     <field name="type">traffic</field>
+     <description>FortiGate: $(action) $(proto) $(srcip):$(srcport) -> $(dstip):$(dstport) [$(service)]</description>
+     <group>,fortigate_visibility,</group>
+   </rule>
+
+</group>
+
+<group name="tpot,honeypot,">
+
+
+<!-- Cowrie SSH brute force -->
+
+<rule id="100100" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="eventid">cowrie.login.failed</field>
+    <description>
+        TPOT Cowrie SSH brute force attempt from $(src_ip)
+    </description>
+    <group>tpot,honeypot,ssh_bruteforce,</group>
+    <mitre>
+        <id>T1110</id>
+    </mitre>
+</rule>
+
+
+<!-- Cowrie connection -->
+
+<rule id="100101" level="8">
+    <decoded_as>json</decoded_as>
+    <field name="eventid">cowrie.session.connect</field>
+    <description>
+        TPOT Cowrie SSH/Telnet connection from $(src_ip)
+    </description>
+    <group>tpot,honeypot,</group>
+</rule>
+
+
+<!-- Dionaea exploit -->
+
+<rule id="100102" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="connection.type">accept</field>
+    <description>
+        TPOT Dionaea malicious connection from $(src_ip)
+    </description>
+    <group>tpot,honeypot,exploit_attempt,</group>
+    <mitre>
+        <id>T1190</id>
+    </mitre>
+</rule>
+
+
+<!-- Heralding brute force -->
+
+<rule id="100103" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="num_auth_attempts" negate="yes">0</field>
+    <description>
+        TPOT Heralding authentication attack from $(source_ip)
+    </description>
+    <group>tpot,honeypot,brute_force,</group>
+    <mitre>
+        <id>T1110</id>
+    </mitre>
+</rule>
+
+
+</group>

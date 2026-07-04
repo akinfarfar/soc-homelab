@@ -1,0 +1,6 @@
+---
+- name: Wazuh manager custom rules and integrations (as-code belgeleme)
+  hosts: wazuh
+  become: true
+  roles:
+    - wazuh_custom_rules

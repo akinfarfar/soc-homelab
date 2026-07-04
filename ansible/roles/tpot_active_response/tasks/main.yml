@@ -1,0 +1,20 @@
+---
+- name: Ensure jq is installed (required by blacklist-ipset.sh)
+  ansible.builtin.apt:
+    name: jq
+    state: present
+
+- name: Validate blacklist-ipset.sh syntax before deploying
+  ansible.builtin.command:
+    cmd: "bash -n {{ role_path }}/files/blacklist-ipset.sh"
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: Deploy blacklist-ipset.sh active-response script
+  ansible.builtin.copy:
+    src: blacklist-ipset.sh
+    dest: /var/ossec/active-response/bin/blacklist-ipset.sh
+    owner: root
+    group: wazuh
+    mode: '0750'
