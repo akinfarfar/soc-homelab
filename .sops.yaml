@@ -3,3 +3,5 @@ creation_rules:
     age: age1u03gf8p9kw823dh99lxz709yu96ch8ql0phmzpayz2vu89dfn56s54gpjv,age13p6n6gmfpsj7p2pspwtj2j0qjw9xh288qv6kp25yftr4ukjsc38sd3a9gx
   - path_regex: secrets/wazuh/.*\.yaml$
     age: age1yenj6a83h0hczptxuxvl59h73ptn8azq5tdnup8yfudr8nfy3snq2edtxy,age13p6n6gmfpsj7p2pspwtj2j0qjw9xh288qv6kp25yftr4ukjsc38sd3a9gx
+  - path_regex: secrets/cloudflare/.*\.yaml$
+    age: age13p6n6gmfpsj7p2pspwtj2j0qjw9xh288qv6kp25yftr4ukjsc38sd3a9gx
