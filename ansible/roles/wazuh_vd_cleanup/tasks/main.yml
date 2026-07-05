@@ -1,0 +1,45 @@
+---
+- name: Deploy VD feed cleanup script
+  ansible.builtin.copy:
+    src: wazuh_vd_feed_cleanup.sh
+    dest: /usr/local/sbin/wazuh_vd_feed_cleanup.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Deploy systemd service unit
+  ansible.builtin.copy:
+    src: wazuh-vd-cleanup.service
+    dest: /etc/systemd/system/wazuh-vd-cleanup.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: service_unit
+
+- name: Deploy systemd timer unit
+  ansible.builtin.copy:
+    src: wazuh-vd-cleanup.timer
+    dest: /etc/systemd/system/wazuh-vd-cleanup.timer
+    owner: root
+    group: root
+    mode: '0644'
+  register: timer_unit
+
+- name: Reload systemd if units changed
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: service_unit.changed or timer_unit.changed
+
+- name: Enable and start the cleanup timer
+  ansible.builtin.systemd:
+    name: wazuh-vd-cleanup.timer
+    enabled: true
+    state: started
+
+- name: Ensure Vulnerability Detection module is disabled (known VD feed-cache disk-fill bug — see Kriz #19)
+  ansible.builtin.replace:
+    path: /var/ossec/etc/ossec.conf
+    regexp: '(<vulnerability-detection>\s*<enabled>)yes(</enabled>)'
+    replace: '\1no\2'
+    backup: true
+  notify: restart wazuh-manager

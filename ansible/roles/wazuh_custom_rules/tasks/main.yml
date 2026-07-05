@@ -41,7 +41,7 @@
     dest: /var/ossec/integrations/custom-alienvault
     owner: root
     group: wazuh
-    mode: '0755'
+    mode: '0750'
 
 - name: Deploy custom-alienvault.py integration script
   ansible.builtin.copy:
@@ -49,4 +49,19 @@
     dest: /var/ossec/integrations/custom-alienvault.py
     owner: root
     group: wazuh
-    mode: '0755'
+    mode: '0750'
+
+- name: Remove now-unused hardcoded api_key from ossec.conf (script reads key from sops at runtime — see Kriz #19 follow-up)
+  ansible.builtin.lineinfile:
+    path: /var/ossec/etc/ossec.conf
+    regexp: '^\s*<api_key>.*</api_key>\s*$'
+    state: absent
+  notify: restart wazuh-manager
+
+- name: Remove dead abuseipdb integration block from ossec.conf (no corresponding script ever existed — see Kriz #19 follow-up)
+  ansible.builtin.replace:
+    path: /var/ossec/etc/ossec.conf
+    regexp: '(?s)\n?\s*<integration>\s*<name>abuseipdb</name>.*?</integration>'
+    replace: ''
+    backup: true
+  notify: restart wazuh-manager

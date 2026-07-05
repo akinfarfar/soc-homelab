@@ -1,0 +1,7 @@
+[Unit]
+Description=Wazuh VD feed cache cleanup (conditional on disk threshold)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/wazuh_vd_feed_cleanup.sh
