@@ -341,14 +341,14 @@
 
   <integration>
     <name>abuseipdb</name>  
-    <api_key>REDACTED_ABUSEIPDB_KEY</api_key>
+    <api_key>REDACTED</api_key>
     <rule_id>100003,100004</rule_id>
     <alert_format>json</alert_format>
   </integration>
 
   <integration>
     <name>custom-alienvault</name>
-    <api_key>REDACTED_ROTATED_OTX_KEY</api_key>
+    <api_key>REDACTED</api_key>
     <rule_id>100003,100004</rule_id>
     <alert_format>json</alert_format>
   </integration>
