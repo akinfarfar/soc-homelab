@@ -160,4 +160,68 @@
 </rule>
 
 
+<!-- Cowrie successful login (basarisiz denemelerden cok daha kritik) -->
+
+<rule id="100104" level="14">
+    <decoded_as>json</decoded_as>
+    <field name="eventid">cowrie.login.success</field>
+    <description>
+        TPOT Cowrie SSH/Telnet successful login from $(src_ip) as $(username)
+    </description>
+    <group>tpot,honeypot,authentication_success,attack,</group>
+    <mitre>
+        <id>T1078</id>
+    </mitre>
+</rule>
+
+<!-- Cowrie file download yakalandi (saldirganin indirdigi/birakmaya calistigi dosya) -->
+<rule id="100105" level="15">
+    <decoded_as>json</decoded_as>
+    <field name="eventid">cowrie.session.file_download</field>
+    <description>
+        TPOT Cowrie file download captured from $(src_ip)
+    </description>
+    <group>tpot,honeypot,file_download,attack,</group>
+    <mitre>
+        <id>T1105</id>
+    </mitre>
+</rule>
+
 </group>
+
+<group name="tpot,availability,">
+  <rule id="100200" level="12">
+    <program_name>tpot-watchdog</program_name>
+    <description>TPOT Watchdog: T-Pot service is down, manual intervention needed (see full_log for details)</description>
+    <group>service_down,</group>
+  </rule>
+</group>
+
+<group name="misp,">
+  <rule id="100600" level="3">
+    <field name="integration">misp</field>
+    <match>misp</match>
+    <description>MISP integration event</description>
+    <options>no_full_log</options>
+  </rule>
+
+  <rule id="100601" level="5">
+    <if_sid>100600</if_sid>
+    <field name="misp.status">^error$</field>
+    <description>MISP - API error: $(misp.error)</description>
+    <options>no_full_log</options>
+    <group>misp_error,</group>
+  </rule>
+
+  <rule id="100602" level="12">
+    <if_sid>100600</if_sid>
+    <field name="misp.status">^match$</field>
+    <description>MISP - IoC match: $(misp.checked_ip) found in event $(misp.event_id) - category $(misp.category)</description>
+    <options>no_full_log</options>
+    <group>misp_alert,</group>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+  </rule>
+</group>
+
