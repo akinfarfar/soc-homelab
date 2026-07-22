@@ -11,7 +11,9 @@ COMMAND=$(echo "$INPUT_JSON" | jq -r '.command')
 SRCIP=$(echo "$INPUT_JSON" | jq -r '
   .parameters.alert.data.srcip //
   .parameters.alert.data.src_ip //
+  .parameters.alert.data.source_ip //
   .parameters.alert.srcip //
+  .parameters.extra_args[0] //
   empty')
 
 if [ -z "$SRCIP" ] || [ "$SRCIP" = "null" ]; then
