@@ -1,0 +1,6 @@
+---
+# playbooks/tpot-install.yml
+- name: Ensure T-Pot is installed and running (idempotent)
+  hosts: tpot
+  roles:
+    - tpot_install

@@ -1,0 +1,66 @@
+---
+- name: docker compose plugin kurulu mu kontrol et
+  ansible.builtin.command: docker compose version
+  register: n8n_docker_compose_check
+  changed_when: false
+  failed_when: false
+
+- name: docker compose v2 plugin dizinini olustur
+  ansible.builtin.file:
+    path: /usr/libexec/docker/cli-plugins
+    state: directory
+    mode: "0755"
+  when: n8n_docker_compose_check.rc != 0
+
+- name: docker compose plugin binary'sini GitHub release'inden indir
+  ansible.builtin.get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_plugin_version }}/docker-compose-linux-{{ 'aarch64' if ansible_architecture == 'aarch64' else 'x86_64' }}"
+    dest: /usr/libexec/docker/cli-plugins/docker-compose
+    mode: "0755"
+  when: n8n_docker_compose_check.rc != 0
+
+- name: n8n kurulum dizinini olustur
+  ansible.builtin.file:
+    path: "{{ n8n_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: docker-compose.yml'i templeple
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ n8n_install_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: n8n image'ini cek ({{ n8n_version }})
+  ansible.builtin.command:
+    cmd: docker compose pull
+    chdir: "{{ n8n_install_dir }}"
+  changed_when: false
+
+- name: n8n container'ini ayaga kaldir / gerekirse yeniden olustur
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ n8n_install_dir }}"
+  register: n8n_up_result
+  changed_when: >-
+    'Started' in n8n_up_result.stderr
+    or 'Created' in n8n_up_result.stderr
+    or 'Recreated' in n8n_up_result.stderr
+
+- name: n8n /healthz endpoint'ini kontrol et (image'da Docker HEALTHCHECK tanimli degil, bu yuzden HTTP ile kontrol ediyoruz)
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ n8n_port }}/healthz"
+    status_code: 200
+  register: n8n_health_check
+  retries: 6
+  delay: 5
+  until: n8n_health_check.status == 200
+  failed_when: false
+
+- name: Durum bilgisi
+  ansible.builtin.debug:
+    msg: "n8n /healthz durumu: {{ n8n_health_check.status | default('bilinmiyor') }} - UI icin: ssh -L {{ n8n_port }}:127.0.0.1:{{ n8n_port }} <user>@<wazuh-server-ip>"

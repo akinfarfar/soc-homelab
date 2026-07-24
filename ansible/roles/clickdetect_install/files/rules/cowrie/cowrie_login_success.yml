@@ -1,0 +1,50 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/cowrie/cowrie_login_success.yml
+# Üretici: convert_sigma_rules.py
+id: 7e1a9e10-1b2a-4b1e-9c3a-1a1f9a2b3c4d
+name: Cowrie Honeypot - Successful Login
+level: 12
+size: '>0'
+active: true
+author:
+- KyloLab SOC
+group: cowrie
+tags:
+- attack.initial_access
+- attack.t1078
+description: 'T-Pot Cowrie honeypot''una başarılı bir SSH/Telnet girişi tespit edildi.
+
+  Bu, sadece kaba kuvvet denemesi değil, saldırganın gerçekten (honeypot''un
+
+  sunduğu) kimlik bilgilerini doğru tahmin ettiği/kullandığı anlamına gelir.
+
+  Başarısız denemelere kıyasla çok daha nadir ve önem derecesi daha yüksektir.'
+sigma: false
+data:
+  source_sigma_id: 7e1a9e10-1b2a-4b1e-9c3a-1a1f9a2b3c4d
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.eventid:cowrie.login.success",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

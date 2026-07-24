@@ -1,0 +1,12 @@
+---
+- name: SSH hardening
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [hardening, ssh]
+
+- name: UFW rules
+  ansible.builtin.import_tasks: ufw.yml
+  tags: [hardening, ufw]
+
+- name: Fail2Ban baseline
+  ansible.builtin.import_tasks: fail2ban.yml
+  tags: [hardening, fail2ban]

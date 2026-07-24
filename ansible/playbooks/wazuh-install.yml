@@ -1,0 +1,7 @@
+---
+# playbooks/wazuh-install.yml
+- name: Ensure Wazuh is installed and running (idempotent)
+  hosts: wazuh
+  become: true
+  roles:
+    - wazuh_install

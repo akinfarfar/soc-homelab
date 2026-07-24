@@ -1,0 +1,43 @@
+---
+- name: Mevcut syslogd ayarini oku
+  ansible.builtin.uri:
+    url: "https://{{ ansible_host }}/api/v2/cmdb/log.syslogd/setting?vdom={{ fortigate_vdom }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ fortigate_api_token }}"
+    validate_certs: false
+    return_content: true
+  register: current_syslog_setting
+
+- name: Istenen durumla kiyasla
+  ansible.builtin.set_fact:
+    syslog_needs_update: >-
+      {{
+        current_syslog_setting.json.results.status != fortigate_syslog_status or
+        current_syslog_setting.json.results.server != fortigate_syslog_server or
+        current_syslog_setting.json.results.mode != fortigate_syslog_mode or
+        current_syslog_setting.json.results.port != fortigate_syslog_port or
+        current_syslog_setting.json.results.facility != fortigate_syslog_facility
+      }}
+
+- name: Syslogd ayarini guncelle (sadece fark varsa)
+  ansible.builtin.uri:
+    url: "https://{{ ansible_host }}/api/v2/cmdb/log.syslogd/setting?vdom={{ fortigate_vdom }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ fortigate_api_token }}"
+    body_format: json
+    body:
+      status: "{{ fortigate_syslog_status }}"
+      server: "{{ fortigate_syslog_server }}"
+      mode: "{{ fortigate_syslog_mode }}"
+      port: "{{ fortigate_syslog_port }}"
+      facility: "{{ fortigate_syslog_facility }}"
+    validate_certs: false
+    status_code: [200]
+  when: syslog_needs_update
+  register: syslog_update_result
+
+- name: Sonuc
+  ansible.builtin.debug:
+    msg: "{{ 'Syslog ayari guncellendi.' if syslog_needs_update else 'Syslog ayari zaten istenen durumda, degisiklik yapilmadi.' }}"

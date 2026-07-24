@@ -1,0 +1,7 @@
+---
+- name: Ensure FortiGate syslog forwarding to Wazuh (idempotent, via REST API)
+  hosts: fortigate
+  connection: local
+  gather_facts: false
+  roles:
+    - fortigate_syslog

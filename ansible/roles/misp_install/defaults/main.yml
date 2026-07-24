@@ -1,0 +1,5 @@
+---
+misp_install_dir: "/opt/misp-docker"
+misp_docker_repo: "https://github.com/MISP/misp-docker.git"
+misp_docker_commit: "6d915d5921183cded7758dad19c8584edbcde642"
+misp_letsencrypt_email: "{{ misp_admin_email }}"

@@ -1,0 +1,61 @@
+---
+# roles/tpot_install/tasks/main.yml
+
+- name: Check for T-Pot .env marker
+  ansible.builtin.stat:
+    path: "{{ tpotce_dir }}/.env"
+  register: tpotce_env_stat
+
+- name: Check for T-Pot docker-compose.yml
+  ansible.builtin.stat:
+    path: "{{ tpotce_dir }}/docker-compose.yml"
+  register: tpotce_compose_stat
+
+- name: Check for tpot.service systemd unit
+  ansible.builtin.stat:
+    path: /etc/systemd/system/tpot.service
+  register: tpot_service_stat
+
+- name: Determine whether any T-Pot install marker is present
+  ansible.builtin.set_fact:
+    tpot_any_marker_present: >-
+      {{ tpotce_env_stat.stat.exists
+         or tpotce_compose_stat.stat.exists
+         or tpot_service_stat.stat.exists }}
+
+- name: Determine whether T-Pot is cleanly, fully installed
+  ansible.builtin.set_fact:
+    tpot_already_installed: >-
+      {{ tpotce_env_stat.stat.exists
+         and tpotce_compose_stat.stat.exists
+         and tpot_service_stat.stat.exists }}
+
+- name: Report existing installation
+  ansible.builtin.debug:
+    msg: >-
+      T-Pot already installed at {{ tpotce_dir }} with tpot.service present
+      — skipping installer.
+  when: tpot_already_installed
+
+- name: Fail on inconsistent state rather than guessing
+  ansible.builtin.fail:
+    msg: >-
+      Inconsistent T-Pot install state: .env exists={{ tpotce_env_stat.stat.exists }},
+      docker-compose.yml exists={{ tpotce_compose_stat.stat.exists }},
+      tpot.service exists={{ tpot_service_stat.stat.exists }} — not all three
+      agree. The installer will NOT run automatically against a partial
+      state (it can re-clone over local changes or misconfigure a
+      half-working honeypot). Investigate manually, then either finish the
+      install by hand or clean up the partial state and re-run this role.
+  when: tpot_any_marker_present and not tpot_already_installed
+
+- name: Run installer on a genuinely clean host
+  ansible.builtin.include_tasks: install.yml
+  when: not tpot_any_marker_present
+
+- name: Ensure tpot.service is enabled and running
+  ansible.builtin.systemd:
+    name: tpot.service
+    enabled: true
+    state: started
+  become: true

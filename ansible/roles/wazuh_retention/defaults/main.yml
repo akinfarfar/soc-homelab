@@ -1,0 +1,24 @@
+---
+# wazuh_retention
+# Indexer'da ISM policy (wazuh-alerts-*/wazuh-archives-* icin otomatik silme)
+# + manager'da rotate edilmis eski flat dosyalari temizleyen cron.
+# Bu ikisi TAMAMEN BAGIMSIZ iki mekanizma - biri digerini kapsamaz.
+
+wazuh_retention_days: 30
+wazuh_retention_policy_id: "wazuh-{{ wazuh_retention_days }}day-retention"
+wazuh_retention_index_patterns:
+  - "wazuh-alerts-*"
+  - "wazuh-archives-*"
+
+wazuh_indexer_base_url: "https://localhost:9200"
+wazuh_indexer_admin_user: "admin"
+# wazuh_dashboard_admin_password: vault'tan gelmeli (indexer icin de gecerli oldugu dogrulanmisti)
+
+wazuh_manager_archives_path: /var/ossec/logs/archives
+wazuh_manager_alerts_path: /var/ossec/logs/alerts
+
+# Manager'daki eski dosya temizlik cron zamanlari (birbirinden birkaç dakika kaydırılmış, aynı anda I/O çakışmasın diye)
+wazuh_retention_cron_archives_hour: 3
+wazuh_retention_cron_archives_minute: 0
+wazuh_retention_cron_alerts_hour: 3
+wazuh_retention_cron_alerts_minute: 5

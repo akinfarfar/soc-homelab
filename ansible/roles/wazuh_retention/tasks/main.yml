@@ -1,0 +1,59 @@
+---
+- name: Mevcut ISM policy'yi kontrol et (guncelleme icin seq_no/primary_term gerekiyor)
+  ansible.builtin.uri:
+    url: "{{ wazuh_indexer_base_url }}/_plugins/_ism/policies/{{ wazuh_retention_policy_id }}"
+    method: GET
+    user: "{{ wazuh_indexer_admin_user }}"
+    password: "{{ wazuh_dashboard_admin_password }}"
+    validate_certs: false
+    force_basic_auth: true
+    status_code: [200, 404]
+  register: wazuh_retention_existing_policy
+
+- name: PUT URL'ini hesapla (yeni policy ise duz, guncelleme ise seq_no/primary_term ekli)
+  ansible.builtin.set_fact:
+    wazuh_retention_put_url: >-
+      {{ wazuh_indexer_base_url }}/_plugins/_ism/policies/{{ wazuh_retention_policy_id }}{{
+        ('?if_seq_no=' + (wazuh_retention_existing_policy.json._seq_no | string) + '&if_primary_term=' + (wazuh_retention_existing_policy.json._primary_term | string))
+        if wazuh_retention_existing_policy.status == 200 else ''
+      }}
+
+- name: ISM retention policy'sini olustur/guncelle
+  ansible.builtin.uri:
+    url: "{{ wazuh_retention_put_url }}"
+    method: PUT
+    user: "{{ wazuh_indexer_admin_user }}"
+    password: "{{ wazuh_dashboard_admin_password }}"
+    validate_certs: false
+    force_basic_auth: true
+    body_format: json
+    body: "{{ lookup('template', 'retention-policy.json.j2') }}"
+    status_code: [200, 201]
+
+- name: Politikayi ilgili indeks pattern'lerine bagla (mevcut indeksler icin - yeni indeksler ism_template ile otomatik alir)
+  ansible.builtin.uri:
+    url: "{{ wazuh_indexer_base_url }}/_plugins/_ism/add/{{ wazuh_retention_index_patterns | join(',') }}"
+    method: POST
+    user: "{{ wazuh_indexer_admin_user }}"
+    password: "{{ wazuh_dashboard_admin_password }}"
+    validate_certs: false
+    force_basic_auth: true
+    body_format: json
+    body:
+      policy_id: "{{ wazuh_retention_policy_id }}"
+    status_code: [200]
+  # Not: eslesen indeks yoksa ya da hepsi zaten bu policy'ye bagliysa API yine de 200 doner (bos/no-op sonuc) - beklenen davranis.
+
+- name: "Manager: eski archives dosyalarini temizleyen cron"
+  ansible.builtin.cron:
+    name: "wazuh archives retention ({{ wazuh_retention_days }}g)"
+    hour: "{{ wazuh_retention_cron_archives_hour }}"
+    minute: "{{ wazuh_retention_cron_archives_minute }}"
+    job: "find {{ wazuh_manager_archives_path }} -type f -mtime +{{ wazuh_retention_days }} -delete"
+
+- name: "Manager: eski alerts dosyalarini temizleyen cron"
+  ansible.builtin.cron:
+    name: "wazuh alerts retention ({{ wazuh_retention_days }}g)"
+    hour: "{{ wazuh_retention_cron_alerts_hour }}"
+    minute: "{{ wazuh_retention_cron_alerts_minute }}"
+    job: "find {{ wazuh_manager_alerts_path }} -type f -mtime +{{ wazuh_retention_days }} -delete"

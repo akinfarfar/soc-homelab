@@ -1,0 +1,8 @@
+hardening_ufw_rules:
+  - { port: "22",  proto: tcp, src: "{{ admin_ip }}",        comment: "admin ssh" }
+  - { port: "443", proto: tcp, src: "{{ admin_ip }}",        comment: "misp dashboard - admin access" }
+  - { port: "443", proto: tcp, src: "{{ wazuh_public_ip }}", comment: "misp api - wazuh integration" }
+
+misp_install_dir: "/opt/misp-docker"
+misp_base_domain: "misp.kylolab.dpdns.org"
+misp_admin_org: "KyloLab"

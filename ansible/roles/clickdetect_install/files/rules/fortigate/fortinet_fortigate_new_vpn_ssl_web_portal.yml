@@ -1,0 +1,48 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/fortigate/fortinet_fortigate_new_vpn_ssl_web_portal.yml
+# Üretici: convert_sigma_rules.py
+id: 2bfb6216-0c31-4d20-8501-2629b29a3fa2
+name: FortiGate - New VPN SSL Web Portal Added
+level: 8
+size: '>0'
+active: true
+author:
+- Marco Pedrinazzi (@pedrinazziM) (InTheCyber)
+group: fortigate
+tags:
+- attack.persistence
+- attack.initial-access
+- attack.t1133
+description: 'Detects the addition of a VPN SSL Web Portal on a Fortinet FortiGate
+  Firewall.
+
+  This behavior was observed in pair with modification of VPN SSL settings.'
+sigma: false
+data:
+  source_sigma_id: 2bfb6216-0c31-4d20-8501-2629b29a3fa2
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.action:Add AND data.cfgpath:vpn.ssl.web.portal",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

@@ -1,0 +1,31 @@
+---
+- name: Ensure ufw is installed
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Set default incoming policy to deny
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set default outgoing policy to allow
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Apply host-specific allow rules
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    src: "{{ item.src }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ hardening_ufw_rules }}"
+  loop_control:
+    label: "{{ item.port }}/{{ item.proto }} <- {{ item.src }}"
+
+- name: Enable ufw with logging
+  community.general.ufw:
+    state: enabled
+    logging: 'low'

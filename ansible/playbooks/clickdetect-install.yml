@@ -1,0 +1,6 @@
+---
+- name: Install and configure ClickDetect (Sigma detection engine)
+  hosts: wazuh
+  become: true
+  roles:
+    - clickdetect_install

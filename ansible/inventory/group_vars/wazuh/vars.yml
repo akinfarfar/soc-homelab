@@ -1,0 +1,6 @@
+hardening_ufw_rules:
+  - { port: "22",   proto: tcp, src: "{{ admin_ip }}",       comment: "admin ssh" }
+  - { port: "443",  proto: tcp, src: "0.0.0.0/0",            comment: "dashboard - direct IP + Cloudflare proxied, both intentional" }
+  - { port: "1514", proto: tcp, src: "{{ internal_cidr }}",  comment: "wazuh agent enrollment" }
+  - { port: "1515", proto: tcp, src: "{{ internal_cidr }}",  comment: "wazuh agent registration" }
+  - { port: "514",  proto: udp, src: "{{ internal_cidr }}",  comment: "syslog" }

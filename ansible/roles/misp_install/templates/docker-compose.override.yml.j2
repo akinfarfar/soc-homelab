@@ -1,0 +1,8 @@
+services:
+  misp-core:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -ks --resolve {{ misp_base_domain }}:443:127.0.0.1 https://{{ misp_base_domain }}/users/heartbeat -o /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5

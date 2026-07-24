@@ -1,0 +1,48 @@
+---
+# roles/wazuh_install/tasks/install.yml
+# Only reached when package_facts shows NO wazuh-manager/indexer/dashboard
+# present at all — see main.yml. This branch generates fresh certs and
+# passwords, so it must never run against an existing cluster.
+
+- name: Announce fresh install
+  ansible.builtin.debug:
+    msg: >-
+      No Wazuh packages detected — proceeding with unified installer
+      (version {{ wazuh_version }}). This will generate NEW passwords/certs.
+
+- name: Check whether the installer script is already staged on the host
+  ansible.builtin.stat:
+    path: "{{ wazuh_install_script_path }}"
+  register: wazuh_installer_script
+
+- name: Fail if the script is missing and downloading isn't enabled
+  ansible.builtin.fail:
+    msg: >-
+      {{ wazuh_install_script_path }} not found on {{ inventory_hostname }}
+      and wazuh_install_download_if_missing is false. Either stage the
+      script manually (matching wazuh_version: {{ wazuh_version }}) or set
+      wazuh_install_download_if_missing: true.
+  when:
+    - not wazuh_installer_script.stat.exists
+    - not wazuh_install_download_if_missing
+
+- name: Download the official unified installer (only if explicitly enabled)
+  ansible.builtin.get_url:
+    url: "{{ wazuh_install_download_url }}"
+    dest: "{{ wazuh_install_script_path }}"
+    mode: "0750"
+  when:
+    - not wazuh_installer_script.stat.exists
+    - wazuh_install_download_if_missing
+
+- name: Run Wazuh unified installer (all-in-one, single node)
+  ansible.builtin.command:
+    cmd: "bash {{ wazuh_install_script_path }} -a"
+    creates: "{{ wazuh_install_log_path }}"
+  become: true
+  register: wazuh_install_result
+
+- name: Show installer output on first run
+  ansible.builtin.debug:
+    var: wazuh_install_result.stdout_lines
+  when: wazuh_install_result is changed

@@ -1,0 +1,16 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:{{ n8n_version }}
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "{{ n8n_listen_address }}:{{ n8n_port }}:5678"
+    environment:
+      - TZ={{ n8n_timezone }}
+      - GENERIC_TIMEZONE={{ n8n_timezone }}
+      - N8N_ENCRYPTION_KEY={{ n8n_encryption_key }}
+    volumes:
+      - {{ n8n_data_volume }}:/home/node/.n8n
+
+volumes:
+  {{ n8n_data_volume }}:

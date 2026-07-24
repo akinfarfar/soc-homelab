@@ -1,0 +1,40 @@
+---
+# clickdetect_install / defaults/main.yml
+
+# --- Sürüm pinleme (misp-docker'daki disiplinle tutarlı: mümkünse tag'e pinle) ---
+clickdetect_repo: "https://github.com/clicksiem/clickdetect.git"
+clickdetect_version: "1.15.0"   # git tag - `git tag -l` ile kontrol edildi, güncellerken buradan artır.
+
+# --- Kurulum yolu ve servis kullanıcısı ---
+clickdetect_install_dir: "/opt/clickdetect"
+clickdetect_user: "clickdetect"     # dedike, ayrıcalıksız sistem kullanıcısı
+clickdetect_group: "clickdetect"
+
+# --- Datasource: yerel wazuh-indexer (OpenSearch), Lucene DSL yolu (PPL DEĞİL - bkz. devamlılık notları) ---
+clickdetect_indexer_url: "https://localhost:9200"
+clickdetect_indexer_index: "wazuh-alerts-4.x-*"
+clickdetect_indexer_username: "admin"
+# NOT: wazuh_dashboard_admin_password kullanılıyor çünkü bu ortamda
+# indexer ve dashboard aynı 'admin' hesabını paylaşıyor - 200 OK ile
+# doğrulandı (bkz. devamlılık notları). Ayrı bir indexer hesabı
+# oluşturulursa bu satırı güncelleyin.
+clickdetect_indexer_password: "{{ wazuh_dashboard_admin_password }}"
+clickdetect_indexer_verify_ssl: false   # wazuh-indexer kendi imzalı sertifika kullanıyor (curl -k testleriyle tutarlı)
+
+# --- Webhook (n8n henüz kurulmadı - bkz. Adım 3 backlog) ---
+# n8n hazır olduğunda bu URL'i gerçek webhook endpoint'iyle değiştirin ve
+# clickdetect_detector_active: true yapın. O zamana kadar detector'lar
+# devre dışı bırakılıyor (rule dosyaları deploy edilir ama hiçbir şey
+# tetiklenmez / webhook denemesi yapılmaz).
+clickdetect_webhook_url: "http://CHANGE_ME_ONCE_N8N_EXISTS:5678/webhook/clickdetect"
+clickdetect_detector_active: false
+
+# --- Tarama aralığı (kullanıcı kararı: 5 dakika, düşük yük) ---
+clickdetect_detector_interval: "5m"
+
+# --- REST API (şimdilik kapalı - ek UFW kuralı gerektirmemesi için) ---
+clickdetect_enable_api: false
+clickdetect_api_port: 8080
+
+# --- uv kurulum yöntemi ---
+clickdetect_python_version: "3.13"

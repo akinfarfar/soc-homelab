@@ -1,0 +1,159 @@
+---
+# clickdetect_install / tasks/main.yml
+#
+# ClickDetect'i wazuh-server (aarch64) üzerine NATIVE (Docker'sız) kurar.
+# Neden Docker yok: ClickDetect saf Python; wazuh-server ARM64 olduğu için
+# Docker imajının arm64 desteğini araştırmak yerine `uv`nin kendi yönettiği
+# Python 3.13 ile native kurulum tercih edildi (bkz. devamlılık notları).
+
+- name: clickdetect için dedike sistem grubu oluştur
+  ansible.builtin.group:
+    name: "{{ clickdetect_group }}"
+    system: true
+    state: present
+
+- name: clickdetect için dedike, ayrıcalıksız sistem kullanıcısı oluştur
+  ansible.builtin.user:
+    name: "{{ clickdetect_user }}"
+    group: "{{ clickdetect_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ clickdetect_install_dir }}"
+    create_home: true
+    state: present
+
+- name: git, curl ve acl kurulu olduğundan emin ol
+  ansible.builtin.apt:
+    name:
+      - git
+      - curl
+      - ca-certificates
+      - acl    # become_user (ayrıcalıksız kullanıcıya geçiş) için ZORUNLU -
+               # yoksa "chmod: invalid mode: 'A+user:...:allow'" hatası alınır
+               # (bkz. devamlılık notları, ansible/ansible#85503)
+    state: present
+    update_cache: true
+
+- name: uv'nin zaten kurulu olup olmadığını kontrol et
+  ansible.builtin.stat:
+    path: /usr/local/bin/uv
+  register: uv_bin_stat
+
+- name: uv'yi sistem genelinde /usr/local/bin altına kur
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_UNMANAGED_INSTALL=1 sh
+  args:
+    executable: /bin/bash
+  when: not uv_bin_stat.stat.exists
+
+- name: uv binary yolunu doğrula
+  ansible.builtin.stat:
+    path: /usr/local/bin/uv
+  register: uv_bin_final
+
+- name: uv kurulumunu doğrula (fail-fast)
+  ansible.builtin.assert:
+    that: uv_bin_final.stat.exists
+    fail_msg: "uv kurulumu başarısız oldu - /usr/local/bin/uv bulunamadı."
+
+- name: clickdetect kurulum dizinlerini oluştur
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ clickdetect_user }}"
+    group: "{{ clickdetect_group }}"
+    mode: "0750"
+  loop:
+    - "{{ clickdetect_install_dir }}"
+    - "{{ clickdetect_install_dir }}/rules"
+    - "{{ clickdetect_install_dir }}/rules/fortigate"
+    - "{{ clickdetect_install_dir }}/rules/cowrie"
+    - "{{ clickdetect_install_dir }}/tools"
+
+- name: clickdetect reposunu belirtilen sürüme (tag) pinleyerek klonla
+  ansible.builtin.git:
+    repo: "{{ clickdetect_repo }}"
+    dest: "{{ clickdetect_install_dir }}/src"
+    version: "{{ clickdetect_version }}"
+    force: true
+  become_user: "{{ clickdetect_user }}"
+
+- name: uv ile Python {{ clickdetect_python_version }} kur (clickdetect kullanıcısı için, izole)
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/uv python install {{ clickdetect_python_version }}"
+  environment:
+    HOME: "{{ clickdetect_install_dir }}"
+  become_user: "{{ clickdetect_user }}"
+  changed_when: true
+
+- name: Bağımlılıkları uv sync ile kur (--no-dev, üretim için)
+  ansible.builtin.command:
+    cmd: "/usr/local/bin/uv sync --no-dev"
+    chdir: "{{ clickdetect_install_dir }}/src"
+  environment:
+    HOME: "{{ clickdetect_install_dir }}"
+  become_user: "{{ clickdetect_user }}"
+  changed_when: true
+
+- name: runner.yml'i (indexer + webhook config) deploy et
+  ansible.builtin.template:
+    src: runner.yml.j2
+    dest: "{{ clickdetect_install_dir }}/runner.yml"
+    owner: "{{ clickdetect_user }}"
+    group: "{{ clickdetect_group }}"
+    mode: "0640"    # indexer şifresi içeriyor - grup/diğer okuma kapalı
+  notify: clickdetect servisini yeniden başlat
+
+- name: FortiGate kurallarını (SigmaHQ'dan dönüştürülmüş) deploy et
+  ansible.builtin.copy:
+    src: "rules/fortigate/"
+    dest: "{{ clickdetect_install_dir }}/rules/fortigate/"
+    owner: "{{ clickdetect_user }}"
+    group: "{{ clickdetect_group }}"
+    mode: "0640"
+  notify: clickdetect servisini yeniden başlat
+
+- name: Cowrie özel kurallarını deploy et
+  ansible.builtin.copy:
+    src: "rules/cowrie/"
+    dest: "{{ clickdetect_install_dir }}/rules/cowrie/"
+    owner: "{{ clickdetect_user }}"
+    group: "{{ clickdetect_group }}"
+    mode: "0640"
+  notify: clickdetect servisini yeniden başlat
+
+- name: Dönüştürme aracını ve kaynak Sigma kurallarını (gelecekte yeni kural üretmek için) deploy et
+  ansible.builtin.copy:
+    src: "tools/"
+    dest: "{{ clickdetect_install_dir }}/tools/"
+    owner: "{{ clickdetect_user }}"
+    group: "{{ clickdetect_group }}"
+    mode: "0640"
+
+- name: systemd servis dosyasını deploy et
+  ansible.builtin.template:
+    src: clickdetect.service.j2
+    dest: /etc/systemd/system/clickdetect.service
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    clickdetect_uv_bin: /usr/local/bin/uv
+  notify:
+    - systemd daemon-reload
+    - clickdetect servisini yeniden başlat
+
+- name: clickdetect servisini etkinleştir ve başlat
+  ansible.builtin.systemd:
+    name: clickdetect
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# NOT: clickdetect_enable_api: true yapılırsa, wazuh grubu için
+# hardening_ufw_rules'a clickdetect_api_port için admin_ip kısıtlı bir
+# kural eklemeniz gerekir (misp grubunda yapılan desene bakın - bkz.
+# devamlılık notları bölüm 1.2). Şu an API kapalı olduğu için yeni bir
+# UFW kuralı GEREKMİYOR (sadece localhost:9200'e ve dışarıya webhook'a
+# giden trafik var, ikisi de zaten UFW'nin izin verdiği yönler).

@@ -1,0 +1,48 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/fortigate/fortinet_fortigate_vpn_ssl_settings_modified.yml
+# Üretici: convert_sigma_rules.py
+id: 8b5dacf2-aeb7-459d-b133-678eb696d410
+name: FortiGate - VPN SSL Settings Modified
+level: 8
+size: '>0'
+active: true
+author:
+- Marco Pedrinazzi (@pedrinazziM) (InTheCyber)
+group: fortigate
+tags:
+- attack.persistence
+- attack.initial-access
+- attack.t1133
+description: 'Detects the modification of VPN SSL Settings (for example, the modification
+  of authentication rules).
+
+  This behavior was observed in pair with the addition of a VPN SSL Web Portal.'
+sigma: false
+data:
+  source_sigma_id: 8b5dacf2-aeb7-459d-b133-678eb696d410
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.action:Edit AND data.cfgpath:vpn.ssl.settings",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

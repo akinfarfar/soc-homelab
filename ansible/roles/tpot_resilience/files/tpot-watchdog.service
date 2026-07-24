@@ -1,0 +1,6 @@
+[Unit]
+Description=T-Pot health watchdog (one-shot check)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/tpot_watchdog.sh

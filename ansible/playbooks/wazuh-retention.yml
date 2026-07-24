@@ -1,0 +1,6 @@
+---
+- name: Wazuh indexer + manager log retention politikasi
+  hosts: wazuh
+  become: true
+  roles:
+    - wazuh_retention

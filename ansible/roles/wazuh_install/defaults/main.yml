@@ -1,0 +1,40 @@
+---
+# roles/wazuh_install/defaults/main.yml
+
+# Pinned to match what's already running on wazuh-server (4.14.5).
+# This is a deliberate version PIN, not a "latest" pointer — bump it
+# consciously when you actually want to upgrade.
+wazuh_version: "4.14.5"
+
+# Where the unified installer script lives on the target host.
+# Currently pre-staged manually at this path on wazuh-server. If a host is
+# rebuilt from scratch and this is missing, either scp the script there
+# yourself first, or set wazuh_install_download_if_missing: true below.
+wazuh_install_script_path: "/home/ubuntu/wazuh-install.sh"
+
+# Do NOT auto-download by default. This forces a conscious decision (and a
+# version check against wazuh_version) before pulling a script from the
+# internet and running it as root.
+wazuh_install_download_if_missing: false
+wazuh_install_download_url: "https://packages.wazuh.com/4.14/wazuh-install.sh"
+
+# Marker file the installer itself creates. Used as the primary idempotency
+# guard (in addition to package_facts).
+wazuh_install_log_path: "/var/log/wazuh-install.log"
+
+# Known/likely locations for the generated password backup file, across
+# different wazuh-install.sh versions and manual conventions. The role only
+# ever checks-for and locks-down permissions on these — it never reads,
+# regenerates, or logs their contents.
+wazuh_password_file_candidates:
+  - /home/ubuntu/soc-secrets/secrets/wazuh/wazuh-install-files.tar.age
+  - /home/ubuntu/soc-secrets/secrets/wazuh/wazuh-passwords-tool.log.age
+  - /home/ubuntu/wazuh-passwords.txt
+  - /home/ubuntu/wazuh-install-files.tar
+  - /root/wazuh-passwords.txt
+  - /root/wazuh-install-files.tar
+
+wazuh_services:
+  - wazuh-manager
+  - wazuh-indexer
+  - wazuh-dashboard

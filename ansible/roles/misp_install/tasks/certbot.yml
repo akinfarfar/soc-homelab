@@ -1,0 +1,50 @@
+---
+- name: Install certbot and Cloudflare DNS plugin
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-dns-cloudflare
+    state: present
+    update_cache: true
+
+- name: Deploy Cloudflare API credentials file for certbot
+  ansible.builtin.copy:
+    dest: /etc/letsencrypt/cloudflare.ini
+    content: "dns_cloudflare_api_token = {{ cloudflare_api_token }}\n"
+    mode: "0600"
+    owner: root
+    group: root
+  no_log: true
+
+- name: Check if certificate already exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ misp_base_domain }}/fullchain.pem"
+  register: misp_cert_check
+
+- name: Obtain Let's Encrypt certificate via DNS-01 (Cloudflare)
+  ansible.builtin.command:
+    cmd: >
+      certbot certonly
+      --non-interactive --agree-tos
+      --email {{ misp_letsencrypt_email }}
+      --dns-cloudflare
+      --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini
+      --dns-cloudflare-propagation-seconds 30
+      -d {{ misp_base_domain }}
+  when: not misp_cert_check.stat.exists
+  register: certbot_issue
+
+- name: Deploy renewal hook (copies renewed cert into misp-docker ssl dir + restarts container)
+  ansible.builtin.copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/misp-docker-deploy.sh
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      set -e
+      DOMAIN="{{ misp_base_domain }}"
+      SSL_DIR="{{ misp_install_dir }}/ssl"
+      cp "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" "${SSL_DIR}/cert.pem"
+      cp "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" "${SSL_DIR}/key.pem"
+      if docker compose -f "{{ misp_install_dir }}/docker-compose.yml" ps misp-core --status running | grep -q misp-core; then
+        docker compose -f "{{ misp_install_dir }}/docker-compose.yml" restart misp-core
+      fi

@@ -1,0 +1,35 @@
+datasource:
+    type: opensearch
+    url: "{{ clickdetect_indexer_url }}"
+    index: "{{ clickdetect_indexer_index }}"
+    username: "{{ clickdetect_indexer_username }}"
+    password: "{{ clickdetect_indexer_password }}"
+    verify: {{ 'true' if clickdetect_indexer_verify_ssl else 'false' }}
+
+webhooks:
+    n8n_generic:
+        type: generic
+        url: "{{ clickdetect_webhook_url }}"
+
+detectors:
+    fortigate_config_changes:
+        name: "FortiGate config değişiklikleri (SigmaHQ'dan dönüştürüldü)"
+        for: "{{ clickdetect_detector_interval }}"
+        description: "FortiGate cfgpath/action event'lerinde SigmaHQ kaynaklı 7 kural"
+        tenant: "kylolab"
+        active: {{ 'true' if clickdetect_detector_active else 'false' }}
+        rules:
+            - "{{ clickdetect_install_dir }}/rules/fortigate/*.yml"
+        webhooks:
+            - n8n_generic
+
+    cowrie_honeypot_activity:
+        name: "Cowrie honeypot özel kuralları"
+        for: "{{ clickdetect_detector_interval }}"
+        description: "T-Pot'a özel yazılan Cowrie kuralları (başarılı giriş, malware staging, dosya indirme)"
+        tenant: "kylolab"
+        active: {{ 'true' if clickdetect_detector_active else 'false' }}
+        rules:
+            - "{{ clickdetect_install_dir }}/rules/cowrie/*.yml"
+        webhooks:
+            - n8n_generic

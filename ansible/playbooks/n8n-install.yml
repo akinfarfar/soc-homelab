@@ -1,0 +1,6 @@
+---
+- name: n8n kurulumu (Docker, wazuh-server uzerinde)
+  hosts: wazuh
+  become: true
+  roles:
+    - n8n_install

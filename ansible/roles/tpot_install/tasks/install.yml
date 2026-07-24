@@ -1,0 +1,51 @@
+---
+# roles/tpot_install/tasks/install.yml
+# Only reached when NO install marker (.env, docker-compose.yml, tpot.service)
+# is present at all — see main.yml. This branch clones the repo fresh and
+# runs the official non-interactive installer.
+
+- name: Announce fresh install
+  ansible.builtin.debug:
+    msg: >-
+      No T-Pot install detected — cloning {{ tpot_install_repo_url }} and
+      running install.sh -s -t {{ tpot_install_type }} (webuser set,
+      password withheld from all output/logs).
+
+- name: Fail fast if webuser/password are required but not supplied
+  ansible.builtin.fail:
+    msg: >-
+      tpot_install_type '{{ tpot_install_type }}' requires
+      tpot_install_webuser and tpot_install_webpassword to be set (via an
+      ansible-vault-encrypted group_vars file — never in plaintext).
+      Aborting before touching the host.
+  when: >-
+    tpot_install_type in ['h', 'l', 'i', 't']
+    and (tpot_install_webuser | length == 0 or tpot_install_webpassword | length == 0)
+
+- name: Clone T-Pot repository
+  ansible.builtin.git:
+    repo: "{{ tpot_install_repo_url }}"
+    dest: "{{ tpotce_dir }}"
+    version: "{{ tpot_install_git_ref }}"
+
+# install.sh internally calls its own local `ansible-playbook ... -c local`
+# run and handles sudo internally per-command — it is run here as the
+# regular ansible_user (NOT become: true), matching how the README describes
+# running it by hand. `creates:` guards against ever re-running it, and
+# no_log hides the password that install.sh's own CLI requires on the
+# command line (a limitation of the upstream script, not this role).
+- name: Run T-Pot installer (non-interactive)
+  ansible.builtin.command:
+    cmd: >-
+      bash install.sh -s -t {{ tpot_install_type }}
+      {{ '-u ' + tpot_install_webuser if tpot_install_webuser | length > 0 else '' }}
+      {{ '-p ' + tpot_install_webpassword if tpot_install_webpassword | length > 0 else '' }}
+    chdir: "{{ tpotce_dir }}"
+    creates: "{{ tpotce_dir }}/.env"
+  register: tpot_install_result
+  no_log: true
+
+- name: Confirm installer completed
+  ansible.builtin.debug:
+    msg: "install.sh finished — rc={{ tpot_install_result.rc }}"
+  when: tpot_install_result is defined

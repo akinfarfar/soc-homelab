@@ -1,0 +1,45 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/fortigate/fortinet_fortigate_new_firewall_policy_added.yml
+# Üretici: convert_sigma_rules.py
+id: f24ab7a8-f09a-4319-82c1-915586aa642b
+name: FortiGate - New Firewall Policy Added
+level: 8
+size: '>0'
+active: true
+author:
+- Marco Pedrinazzi (@pedrinazziM) (InTheCyber)
+group: fortigate
+tags:
+- attack.defense-impairment
+- attack.t1686.002
+description: Detects the addition of a new firewall policy on a Fortinet FortiGate
+  Firewall.
+sigma: false
+data:
+  source_sigma_id: f24ab7a8-f09a-4319-82c1-915586aa642b
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.action:Add AND data.cfgpath:firewall.policy",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

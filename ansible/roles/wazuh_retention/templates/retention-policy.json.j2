@@ -1,0 +1,33 @@
+{
+  "policy": {
+    "description": "wazuh-alerts ve wazuh-archives icin {{ wazuh_retention_days }} gunluk retention",
+    "default_state": "hot",
+    "states": [
+      {
+        "name": "hot",
+        "actions": [],
+        "transitions": [
+          {
+            "state_name": "delete",
+            "conditions": {
+              "min_index_age": "{{ wazuh_retention_days }}d"
+            }
+          }
+        ]
+      },
+      {
+        "name": "delete",
+        "actions": [
+          { "delete": {} }
+        ],
+        "transitions": []
+      }
+    ],
+    "ism_template": [
+      {
+        "index_patterns": {{ wazuh_retention_index_patterns | to_json }},
+        "priority": 100
+      }
+    ]
+  }
+}

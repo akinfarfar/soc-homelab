@@ -1,0 +1,58 @@
+---
+- name: Deploy hardened tpot.service unit (bounded restart limits, drops stale RemainAfterExit)
+  ansible.builtin.copy:
+    src: tpot.service
+    dest: /etc/systemd/system/tpot.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: tpot_unit
+  tags: [tpot, resilience, systemd]
+
+- name: Reload systemd if tpot.service changed
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: tpot_unit.changed
+  tags: [tpot, resilience, systemd]
+
+- name: Deploy tpot watchdog script
+  ansible.builtin.copy:
+    src: tpot_watchdog.sh
+    dest: /usr/local/sbin/tpot_watchdog.sh
+    owner: root
+    group: root
+    mode: '0750'
+  tags: [tpot, resilience, watchdog]
+
+- name: Deploy tpot watchdog systemd service unit
+  ansible.builtin.copy:
+    src: tpot-watchdog.service
+    dest: /etc/systemd/system/tpot-watchdog.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: watchdog_service
+  tags: [tpot, resilience, watchdog]
+
+- name: Deploy tpot watchdog systemd timer unit
+  ansible.builtin.copy:
+    src: tpot-watchdog.timer
+    dest: /etc/systemd/system/tpot-watchdog.timer
+    owner: root
+    group: root
+    mode: '0644'
+  register: watchdog_timer
+  tags: [tpot, resilience, watchdog]
+
+- name: Reload systemd if watchdog units changed
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: watchdog_service.changed or watchdog_timer.changed
+  tags: [tpot, resilience, watchdog]
+
+- name: Enable and start the watchdog timer
+  ansible.builtin.systemd:
+    name: tpot-watchdog.timer
+    enabled: true
+    state: started
+  tags: [tpot, resilience, watchdog]

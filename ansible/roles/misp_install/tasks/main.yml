@@ -1,0 +1,9 @@
+---
+- name: Include Docker installation tasks
+  ansible.builtin.include_tasks: docker.yml
+
+- name: Include certbot / Let's Encrypt tasks
+  ansible.builtin.include_tasks: certbot.yml
+
+- name: Include MISP deployment tasks
+  ansible.builtin.include_tasks: deploy.yml

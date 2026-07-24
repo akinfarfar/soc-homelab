@@ -1,0 +1,45 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/fortigate/fortinet_fortigate_new_firewall_address_object.yml
+# Üretici: convert_sigma_rules.py
+id: 5c8d7b41-3812-432f-a0bb-4cfb7c31827e
+name: FortiGate - Firewall Address Object Added
+level: 8
+size: '>0'
+active: true
+author:
+- Marco Pedrinazzi (@pedrinazziM) (InTheCyber)
+group: fortigate
+tags:
+- attack.defense-impairment
+- attack.t1686.002
+description: Detects the addition of firewall address objects on a Fortinet FortiGate
+  Firewall.
+sigma: false
+data:
+  source_sigma_id: 5c8d7b41-3812-432f-a0bb-4cfb7c31827e
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.action:Add AND data.cfgpath:firewall.address",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

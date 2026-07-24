@@ -1,0 +1,6 @@
+---
+- name: Baseline hardening (SSH, UFW, Fail2Ban)
+  hosts: tpot:wazuh:misp
+  become: true
+  roles:
+    - hardening

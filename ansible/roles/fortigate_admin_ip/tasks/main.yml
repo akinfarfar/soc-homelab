@@ -1,0 +1,21 @@
+---
+# roles/fortigate_admin_ip/tasks/main.yml
+#
+# "admin_ip" degiskeni ayri tanimlanmiyor - group_vars/all/hardening.yml'de
+# zaten tutulan ayni degisken kullaniliyor (tek dogruluk kaynagi). Bu role,
+# hardening.yml uygulandiktan sonra calistirilmali ki admin_ip guncel olsun.
+
+- name: Ensure FortiGate kalo-admin address object matches current admin_ip
+  fortinet.fortios.fortios_firewall_address:
+    vdom: "{{ fortigate_vdom | default('root') }}"
+    state: present
+    access_token: "{{ fortigate_fwaddr_api_token }}"
+    firewall_address:
+      name: "kalo-admin"
+      type: ipmask
+      subnet: "{{ admin_ip }} 255.255.255.255"
+  register: fortigate_admin_ip_result
+
+- name: Report result
+  ansible.builtin.debug:
+    msg: "kalo-admin address object reconciled (yukaridaki PLAY RECAP changed sayacina bakin)."

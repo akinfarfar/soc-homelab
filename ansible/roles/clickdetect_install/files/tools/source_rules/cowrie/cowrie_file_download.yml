@@ -1,0 +1,23 @@
+title: Cowrie Honeypot - File Download Captured
+id: 9d0e1f2a-3b4c-4d5e-9f0a-1b2c3d4e5f6a
+status: experimental
+description: |
+    Cowrie, bir oturumda saldırganın indirmeye çalıştığı bir dosyayı
+    (genellikle bir malware örneği) yakaladı. Bu, sadece komut girişini
+    değil, gerçek bir dosya transferi teşebbüsünü gösterir ve dosya
+    örneğinin analiz için Cowrie'nin dl/ dizininde saklandığı anlamına gelir.
+author: KyloLab SOC
+date: 2026/07/09
+tags:
+    - attack.command_and_control
+    - attack.t1105
+logsource:
+    product: cowrie
+    service: session
+detection:
+    selection:
+        eventid: 'cowrie.session.file_download'
+    condition: selection
+falsepositives:
+    - Yok - honeypot'ta meşru dosya indirme senaryosu bulunmuyor.
+level: critical

@@ -1,0 +1,9 @@
+---
+- name: systemd daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: clickdetect servisini yeniden başlat
+  ansible.builtin.systemd:
+    name: clickdetect
+    state: restarted

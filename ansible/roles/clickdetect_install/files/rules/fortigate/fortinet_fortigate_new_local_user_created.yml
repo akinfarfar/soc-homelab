@@ -1,0 +1,46 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/fortigate/fortinet_fortigate_new_local_user_created.yml
+# Üretici: convert_sigma_rules.py
+id: ddbbe845-1d74-43a8-8231-2156d180234d
+name: FortiGate - New Local User Created
+level: 8
+size: '>0'
+active: true
+author:
+- Marco Pedrinazzi (@pedrinazziM) (InTheCyber)
+group: fortigate
+tags:
+- attack.persistence
+- attack.t1136.001
+description: 'Detects the creation of a new local user on a Fortinet FortiGate Firewall.
+
+  The new local user could be used for VPN connections.'
+sigma: false
+data:
+  source_sigma_id: ddbbe845-1d74-43a8-8231-2156d180234d
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.action:Add AND data.cfgpath:user.local",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

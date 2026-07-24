@@ -1,0 +1,6 @@
+---
+- name: Install and configure MISP (Docker)
+  hosts: misp
+  become: true
+  roles:
+    - misp_install

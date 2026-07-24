@@ -1,0 +1,21 @@
+[Unit]
+Description=ClickDetect - Sigma/SIEM detection engine (Wazuh indexer üzerinde)
+After=network-online.target wazuh-indexer.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ clickdetect_user }}
+Group={{ clickdetect_group }}
+WorkingDirectory={{ clickdetect_install_dir }}/src
+Environment="PATH={{ clickdetect_install_dir }}/src/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart={{ clickdetect_uv_bin }} run --no-sync clickdetect -r {{ clickdetect_install_dir }}/runner.yml{{ ' --api -p ' ~ clickdetect_api_port if clickdetect_enable_api else '' }}
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

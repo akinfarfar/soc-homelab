@@ -1,0 +1,17 @@
+---
+# roles/tpot_install/defaults/main.yml
+
+tpotce_dir: "/home/ubuntu/tpotce"
+tpot_install_repo_url: "https://github.com/telekom-security/tpotce.git"
+tpot_install_git_ref: "master"
+
+# Maps to TPOT_TYPE in .env: HIVE -> h, SENSOR -> s, LLM -> l, MINI -> i,
+# MOBILE -> m, TARPIT -> t. This environment's .env shows TPOT_TYPE=HIVE.
+tpot_install_type: "h"
+
+# REQUIRED for types h/l/i/t (hive/llm/mini/tarpit) — install.sh will refuse
+# without them. Left empty here on purpose: override via an
+# ansible-vault-encrypted group_vars file (e.g. group_vars/tpot/vault.yml),
+# never in plaintext. install.yml fails fast if these are needed but unset.
+tpot_install_webuser: ""
+tpot_install_webpassword: ""

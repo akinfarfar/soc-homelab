@@ -1,0 +1,17 @@
+---
+# n8n_install - wazuh-server uzerinde Docker ile n8n (resmi arm64 image, official-recommended yontem)
+
+n8n_version: "latest"
+n8n_install_dir: /opt/n8n
+n8n_data_volume: n8n_data
+n8n_listen_address: "127.0.0.1"  # SADECE localhost - ClickDetect webhook'u ayni host'tan cagiracak.
+                                   # n8n editor UI'ina erismek icin SSH tunnel kullanin:
+                                   # ssh -L 5678:127.0.0.1:5678 <user>@wazuh-server
+n8n_port: 5678
+n8n_timezone: "Europe/Istanbul"  # ihtiyaca gore degistirin
+
+# n8n_encryption_key: vault'tan gelmeli, ONCEDEN generate edip vault'a eklemeniz gerekiyor:
+#   openssl rand -hex 32
+# Bu key credential sifrelemesi icin kullanilir - sabit kalmali, degisirse/kaybolursa
+# n8n icindeki mevcut TUM credential'lar (API anahtarlari vb.) cozumlenemez hale gelir.
+docker_compose_plugin_version: "v5.3.0"

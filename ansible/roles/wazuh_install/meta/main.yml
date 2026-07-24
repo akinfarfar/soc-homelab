@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  role_name: wazuh_install
+  description: >-
+    Idempotent check-then-install wrapper around Wazuh's official unified
+    installer (wazuh-install.sh -a). Never re-runs the installer against an
+    existing cluster; fails loudly on inconsistent state instead of guessing.
+  author: soc-homelab
+  min_ansible_version: "2.14"
+dependencies: []

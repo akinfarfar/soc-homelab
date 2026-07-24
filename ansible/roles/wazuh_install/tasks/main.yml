@@ -1,0 +1,64 @@
+---
+# roles/wazuh_install/tasks/main.yml
+
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+    manager: apt
+
+- name: Check for Wazuh installer completion marker
+  ansible.builtin.stat:
+    path: "{{ wazuh_install_log_path }}"
+  register: wazuh_install_log
+  become: true
+
+- name: Determine whether any Wazuh package is present
+  ansible.builtin.set_fact:
+    wazuh_any_package_present: >-
+      {{ (ansible_facts.packages['wazuh-manager'] is defined)
+         or (ansible_facts.packages['wazuh-indexer'] is defined)
+         or (ansible_facts.packages['wazuh-dashboard'] is defined) }}
+
+- name: Determine whether Wazuh is cleanly, fully installed
+  ansible.builtin.set_fact:
+    wazuh_already_installed: >-
+      {{ (ansible_facts.packages['wazuh-manager'] is defined)
+         and (ansible_facts.packages['wazuh-indexer'] is defined)
+         and (ansible_facts.packages['wazuh-dashboard'] is defined)
+         and wazuh_install_log.stat.exists }}
+
+- name: Report existing installation
+  ansible.builtin.debug:
+    msg: >-
+      Wazuh {{ ansible_facts.packages['wazuh-manager'][0].version }} already
+      installed and installer marker log present — skipping installer.
+  when: wazuh_already_installed
+
+- name: Fail on inconsistent state rather than guessing
+  ansible.builtin.fail:
+    msg: >-
+      Inconsistent Wazuh install state detected: some packages present
+      ({{ ansible_facts.packages['wazuh-manager'] is defined }},
+      {{ ansible_facts.packages['wazuh-indexer'] is defined }},
+      {{ ansible_facts.packages['wazuh-dashboard'] is defined }} for
+      manager/indexer/dashboard) but not all three, or the installer marker
+      log ({{ wazuh_install_log_path }}) disagrees with package state. The
+      installer will NOT be run automatically here — rerunning it against a
+      partially-working cluster can regenerate certs/passwords and break
+      things further. Investigate manually, then either finish the install
+      by hand or remove the partial state and re-run this role.
+  when: wazuh_any_package_present and not wazuh_already_installed
+
+- name: Run installer on a genuinely clean host
+  ansible.builtin.include_tasks: install.yml
+  when: not wazuh_any_package_present
+
+- name: Ensure Wazuh services are enabled and running
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ wazuh_services }}"
+  become: true
+
+- name: Secure any password/cert artifacts found on disk
+  ansible.builtin.include_tasks: secure_secrets.yml

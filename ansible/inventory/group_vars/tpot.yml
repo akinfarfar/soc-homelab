@@ -1,0 +1,6 @@
+hardening_ufw_rules:
+  - { port: "64295", proto: tcp, src: "{{ admin_ip }}",      comment: "admin ssh (custom port)" }
+  - { port: "64294", proto: tcp, src: "{{ admin_ip }}",      comment: "cockpit" }
+  - { port: "64297", proto: tcp, src: "{{ admin_ip }}",      comment: "tpot webui" }
+  - { port: "1514",  proto: tcp, src: "{{ internal_cidr }}", comment: "wazuh agent enrollment" }
+  - { port: "1515",  proto: tcp, src: "{{ internal_cidr }}", comment: "wazuh agent registration" }

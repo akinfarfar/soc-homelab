@@ -1,0 +1,46 @@
+# OTOMATIK ÜRETİLDİ - elle düzenlemeyin.
+# Kaynak: /home/claude/sigma_work/source_rules/fortigate/fortinet_fortigate_user_group_modified.yml
+# Üretici: convert_sigma_rules.py
+id: 69ffc84e-8b1a-4024-8351-e018f66b8275
+name: FortiGate - User Group Modified
+level: 8
+size: '>0'
+active: true
+author:
+- Marco Pedrinazzi (@pedrinazziM) (InTheCyber)
+group: fortigate
+tags:
+- attack.persistence
+- attack.privilege-escalation
+description: 'Detects the modification of a user group on a Fortinet FortiGate Firewall.
+
+  The group could be used to grant VPN access to a network.'
+sigma: false
+data:
+  source_sigma_id: 69ffc84e-8b1a-4024-8351-e018f66b8275
+rule: |-
+  {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "query_string": {
+              "query": "data.action:Edit AND data.cfgpath:user.group",
+              "analyze_wildcard": true
+            }
+          }
+        ],
+        "filter": [
+          {
+            "range": {
+              "@timestamp": {
+                "gte": "{{ startime }}",
+                "lte": "{{ endtime }}",
+                "format": "epoch_second"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }

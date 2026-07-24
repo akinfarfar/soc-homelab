@@ -1,0 +1,23 @@
+title: Cowrie Honeypot - Successful Login
+id: 7e1a9e10-1b2a-4b1e-9c3a-1a1f9a2b3c4d
+status: experimental
+description: |
+    T-Pot Cowrie honeypot'una başarılı bir SSH/Telnet girişi tespit edildi.
+    Bu, sadece kaba kuvvet denemesi değil, saldırganın gerçekten (honeypot'un
+    sunduğu) kimlik bilgilerini doğru tahmin ettiği/kullandığı anlamına gelir.
+    Başarısız denemelere kıyasla çok daha nadir ve önem derecesi daha yüksektir.
+author: KyloLab SOC
+date: 2026/07/09
+tags:
+    - attack.initial_access
+    - attack.t1078
+logsource:
+    product: cowrie
+    service: session
+detection:
+    selection:
+        eventid: 'cowrie.login.success'
+    condition: selection
+falsepositives:
+    - Yok - bu bir honeypot, meşru kullanıcı girişi olmamalı.
+level: high

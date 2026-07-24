@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: fortigate_syslog
+  description: >-
+    Idempotent, declarative syslog-forwarding config for FortiGate ->
+    Wazuh, via fortinet.fortios httpapi + scoped API token (loggrp
+    read-write only). Does not touch firewall policy, interfaces, or any
+    other FortiGate configuration.
+  author: soc-homelab
+  min_ansible_version: "2.15"
+dependencies: []

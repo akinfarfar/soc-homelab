@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: fortigate_admin_ip
+  description: >-
+    Keeps the FortiGate "kalo-admin" firewall address object (used by
+    local-in-policy id 2) in sync with the admin_ip variable already
+    tracked in group_vars/all/hardening.yml. Run after the hardening
+    playbook so admin_ip is already current.
+  author: soc-homelab
+  min_ansible_version: "2.15"
+dependencies: []

@@ -1,0 +1,14 @@
+---
+# roles/fortigate_syslog/defaults/main.yml
+
+# Confirmed via `ansible wazuh -m shell -a "hostname -I"` -> 10.0.0.92
+fortigate_syslog_server: "10.0.0.92"
+fortigate_syslog_port: 514
+fortigate_syslog_mode: "udp"
+fortigate_syslog_facility: "local7"
+fortigate_syslog_status: "enable"
+
+# Single-VDOM device (Virtual domain configuration: disable) — "root" is the
+# only vdom that exists. This is a per-API-call parameter for the fortios
+# module, unrelated to the (nonexistent, on this device) api-user vdom field.
+fortigate_vdom: "root"

@@ -1,0 +1,82 @@
+---
+- name: Ensure git is installed
+  ansible.builtin.apt:
+    name: git
+    state: present
+
+- name: Check if misp-docker repo already cloned
+  ansible.builtin.stat:
+    path: "{{ misp_install_dir }}/.git"
+  register: misp_repo_check
+
+- name: Clone misp-docker at pinned commit
+  ansible.builtin.git:
+    repo: "{{ misp_docker_repo }}"
+    dest: "{{ misp_install_dir }}"
+    version: "{{ misp_docker_commit }}"
+  when: not misp_repo_check.stat.exists
+  become: true
+
+- name: Copy repo's template.env to .env if not already present
+  ansible.builtin.copy:
+    src: "{{ misp_install_dir }}/template.env"
+    dest: "{{ misp_install_dir }}/.env"
+    remote_src: true
+    force: false
+    mode: "0600"
+
+- name: Set required MISP secrets and config in .env
+  ansible.builtin.lineinfile:
+    path: "{{ misp_install_dir }}/.env"
+    regexp: "^#?{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+  loop:
+    - { key: "BASE_URL",         value: "https://{{ misp_base_domain }}" }
+    - { key: "MYSQL_PASSWORD",      value: "{{ misp_mysql_password }}" }
+    - { key: "MYSQL_ROOT_PASSWORD", value: "{{ misp_mysql_root_password }}" }
+    - { key: "ADMIN_EMAIL",       value: "{{ misp_admin_email }}" }
+    - { key: "ADMIN_PASSWORD",    value: "{{ misp_admin_password }}" }
+    - { key: "ADMIN_ORG",         value: "{{ misp_admin_org }}" }
+    - { key: "ADMIN_ORG_UUID",    value: "{{ misp_admin_org_uuid }}" }
+    - { key: "MISP_EMAIL",        value: "{{ misp_admin_email }}" }
+    - { key: "GPG_PASSPHRASE",    value: "{{ misp_gpg_passphrase }}" }
+    - { key: "REDIS_PASSWORD",    value: "{{ misp_redis_password }}" }
+    - { key: "ENCRYPTION_KEY",    value: "{{ misp_encryption_key }}" }
+    - { key: "SALT",              value: "{{ misp_salt }}" }
+    - { key: "UUID",              value: "{{ misp_instance_uuid }}" }
+  no_log: true
+
+- name: Ensure ssl directory exists
+  ansible.builtin.file:
+    path: "{{ misp_install_dir }}/ssl"
+    state: directory
+    mode: "0755"
+
+- name: Copy current Let's Encrypt certificate into misp-docker ssl dir
+  ansible.builtin.copy:
+    src: "/etc/letsencrypt/live/{{ misp_base_domain }}/{{ item.src }}"
+    dest: "{{ misp_install_dir }}/ssl/{{ item.dest }}"
+    remote_src: true
+    mode: "0644"
+  loop:
+    - { src: "fullchain.pem", dest: "cert.pem" }
+    - { src: "privkey.pem",   dest: "key.pem" }
+
+- name: Deploy docker-compose override (fix misp-core healthcheck hairpin issue)
+  ansible.builtin.template:
+    src: docker-compose.override.yml.j2
+    dest: "{{ misp_install_dir }}/docker-compose.override.yml"
+    mode: "0644"
+
+- name: Pull pre-built MISP images (pinned by checked-out commit's template.env)
+  ansible.builtin.command:
+    cmd: docker compose pull
+    chdir: "{{ misp_install_dir }}"
+  changed_when: false
+
+- name: Start MISP stack
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ misp_install_dir }}"
+  register: misp_up
+  changed_when: "'Started' in misp_up.stdout or 'Created' in misp_up.stdout"

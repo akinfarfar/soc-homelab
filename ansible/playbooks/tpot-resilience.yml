@@ -1,0 +1,6 @@
+---
+- name: T-Pot service resilience (systemd restart limits + health watchdog)
+  hosts: tpot
+  become: true
+  roles:
+    - tpot_resilience
