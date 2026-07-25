@@ -8,6 +8,7 @@
     validate_certs: false
     return_content: true
   register: current_syslog_setting
+  check_mode: false
 
 - name: Istenen durumla kiyasla
   ansible.builtin.set_fact:

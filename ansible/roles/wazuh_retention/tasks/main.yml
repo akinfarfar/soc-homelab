@@ -9,6 +9,7 @@
     force_basic_auth: true
     status_code: [200, 404]
   register: wazuh_retention_existing_policy
+  check_mode: false
 
 - name: PUT URL'ini hesapla (yeni policy ise duz, guncelleme ise seq_no/primary_term ekli)
   ansible.builtin.set_fact:
