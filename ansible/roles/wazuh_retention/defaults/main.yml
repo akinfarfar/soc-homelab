@@ -4,7 +4,7 @@
 # + manager'da rotate edilmis eski flat dosyalari temizleyen cron.
 # Bu ikisi TAMAMEN BAGIMSIZ iki mekanizma - biri digerini kapsamaz.
 
-wazuh_retention_days: 30
+wazuh_retention_days: 20
 wazuh_retention_policy_id: "wazuh-{{ wazuh_retention_days }}day-retention"
 wazuh_retention_index_patterns:
   - "wazuh-alerts-*"
