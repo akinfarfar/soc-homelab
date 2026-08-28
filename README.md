@@ -4,7 +4,7 @@
 
 Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unun mimari kararlarının, otomasyonunun ve karşılaşılan/çözülen krizlerin kaydıdır. Tüm süreç, gerekçeleriyle birlikte iki dilli (TR/EN) bir teknik yazı dizisi olarak Medium'da yayınlanmıştır.
 
-**[Tam yazı dizisini Medium'da okuyun →](#https://medium.com/@akinfarfar/s%C4%B1f%C4%B1rdan-%C3%BCretim-seviyesine-bir-soc-analistinin-homelab-ve-operasyon-rehberi-452a73debdde)**
+**[Tam yazı dizisini Medium'da okuyun →](https://medium.com/@akinfarfar/s%C4%B1f%C4%B1rdan-%C3%BCretim-seviyesine-bir-soc-analistinin-homelab-ve-operasyon-rehberi-452a73debdde)**
 
 ---
 
