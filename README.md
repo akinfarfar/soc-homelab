@@ -157,7 +157,7 @@ Bu kararların her birinin tam teknik dökümü (komutlar, hata mesajları, doğ
 **Akın Farfar** — Junior SOC Analyst | Blue Team | Detection Engineering
 Antalya, Türkiye
 
-[LinkedIn](#) · [Medium](#) · [Credly](#)
+[LinkedIn](https://www.linkedin.com/in/akinfarfar/) · [Medium](https://medium.com/@akinfarfar) · [Credly](https://www.credly.com/users/akin-farfar/badges/credly)
 
 ---
 
