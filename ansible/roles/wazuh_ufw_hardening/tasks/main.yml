@@ -1,0 +1,44 @@
+---
+- name: Ensure ufw is installed
+  ansible.builtin.package:
+    name: ufw
+    state: present
+  become: true
+
+- name: Allow Wazuh dashboard ({{ wazuh_dashboard_port }}/tcp) from each Cloudflare edge range
+  community.general.ufw:
+    rule: allow
+    port: "{{ wazuh_dashboard_port }}"
+    proto: tcp
+    src: "{{ item }}"
+    comment: "Cloudflare edge range"
+  loop: "{{ cloudflare_ipv4_ranges }}"
+  become: true
+
+- name: Allow Wazuh dashboard ({{ wazuh_dashboard_port }}/tcp) from admin IP (direct, bypassing Cloudflare)
+  community.general.ufw:
+    rule: allow
+    port: "{{ wazuh_dashboard_port }}"
+    proto: tcp
+    src: "{{ admin_ip }}"
+    comment: "Admin direct access"
+  become: true
+
+- name: Deny all other inbound to Wazuh dashboard port (closes direct-origin exposure)
+  community.general.ufw:
+    rule: deny
+    port: "{{ wazuh_dashboard_port }}"
+    proto: tcp
+    comment: "explicit deny -- Cloudflare/admin allow rules above take precedence"
+  become: true
+
+- name: Show resulting ufw rule order for manual sanity-check
+  ansible.builtin.command: ufw status numbered
+  become: true
+  check_mode: false
+  register: ufw_status
+  changed_when: false
+
+- name: Print ufw status
+  ansible.builtin.debug:
+    var: ufw_status.stdout_lines

@@ -1,0 +1,37 @@
+- name: Check bootloader state
+  hosts: wazuh:tpot
+  become: yes
+  tasks:
+    - name: Show current kernel cmdline
+      shell: cat /proc/cmdline
+      register: cmdline
+      changed_when: false
+
+    - name: Show grub default line
+      shell: grep '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub
+      register: grubline
+      changed_when: false
+      failed_when: false
+
+    - name: Check grub config for lockdown
+      shell: grep -n 'lockdown=integrity' /boot/grub/grub.cfg || true
+      register: grubcfg
+      changed_when: false
+
+    - name: Check bootloader hints
+      shell: |
+        echo "=== bootctl ==="
+        bootctl status 2>/dev/null | sed -n '1,80p' || true
+        echo "=== efibootmgr ==="
+        efibootmgr 2>/dev/null || true
+      register: bootinfo
+      changed_when: false
+      failed_when: false
+
+    - name: Print results
+      debug:
+        msg:
+          - "CMDLINE={{ cmdline.stdout }}"
+          - "GRUB={{ grubline.stdout | default('n/a') }}"
+          - "GRUBCFG={{ grubcfg.stdout_lines | default([]) }}"
+          - "BOOTINFO={{ bootinfo.stdout_lines }}"

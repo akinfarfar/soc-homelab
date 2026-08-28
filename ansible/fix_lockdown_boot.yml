@@ -1,0 +1,39 @@
+- name: Add lockdown to boot cmdline
+  hosts: wazuh:tpot
+  become: yes
+  tasks:
+    - name: Backup grub files if present
+      shell: |
+        set -e
+        for f in /etc/default/grub /etc/default/grub.d/50-cloudimg-settings.cfg; do
+          [ -f "$f" ] || continue
+          cp "$f" "$f.bak.$(date +%F-%H%M%S)"
+        done
+      changed_when: true
+
+    - name: Append lockdown to GRUB_CMDLINE_LINUX_DEFAULT in both files
+      shell: |
+        set -e
+        for f in /etc/default/grub /etc/default/grub.d/50-cloudimg-settings.cfg; do
+          [ -f "$f" ] || continue
+          if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$f" && ! grep -q 'lockdown=integrity' "$f"; then
+            sed -i 's#^\(GRUB_CMDLINE_LINUX_DEFAULT="[^"]*\)"#\1 lockdown=integrity"#' "$f"
+          fi
+        done
+      changed_when: true
+
+    - name: Show resulting grub cmdline lines
+      shell: |
+        echo "--- /etc/default/grub ---"
+        grep '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub || true
+        echo "--- /etc/default/grub.d/50-cloudimg-settings.cfg ---"
+        grep '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub.d/50-cloudimg-settings.cfg || true
+      register: cmdlines
+      changed_when: false
+
+    - debug:
+        var: cmdlines.stdout_lines
+
+    - name: Regenerate grub
+      command: update-grub
+      changed_when: true

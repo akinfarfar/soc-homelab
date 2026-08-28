@@ -1,0 +1,41 @@
+---
+- name: eBPF ve Kernel sertleştirme sysctl parametrelerini uygula
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  ignore_errors: true
+  loop:
+    - { name: 'kernel.unprivileged_bpf_disabled', value: '1' }
+    - { name: 'kernel.bpf_jit_harden', value: '2' }
+    - { name: 'kernel.kptr_restrict', value: '2' }
+
+- name: Auditd paketinin kurulu olduğundan emin ol
+  ansible.builtin.apt:
+    name: auditd
+    state: present
+    update_cache: yes
+
+- name: eBPF execution izleme kuralını auditd'ye ekle
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/ebpf.rules
+    content: |
+      -a always,exit -F arch=b64 -S bpf -F key=ebpf_execution
+    owner: root
+    group: root
+    mode: '0640'
+  notify: Reload Auditd
+
+- name: Wazuh Agent'ın audit.log'u izlemesini sağla
+  ansible.builtin.blockinfile:
+    path: /var/ossec/etc/ossec.conf
+    insertbefore: '</ossec_config>'
+    marker: "<!-- {mark} SOC HOMELAB AUDIT -->"
+    block: |
+      <localfile>
+        <location>/var/log/audit/audit.log</location>
+        <log_format>audit</log_format>
+      </localfile>
+  notify: Restart Wazuh Agent

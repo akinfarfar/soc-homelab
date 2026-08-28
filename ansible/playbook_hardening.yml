@@ -1,0 +1,12 @@
+---
+- name: SSH sertleştirme (T-Pot, Wazuh, MISP)
+  hosts: tpot:wazuh:misp
+  become: true
+  roles:
+    - hardening_ssh
+
+- name: eBPF/telemetry evasion savunması (sadece T-Pot)
+  hosts: tpot:wazuh:misp
+  become: true
+  roles:
+    - hardening_ebpf

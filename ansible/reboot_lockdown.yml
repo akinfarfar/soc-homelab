@@ -1,0 +1,19 @@
+- name: Reboot T-Pot for lockdown
+  hosts: tpot
+  become: yes
+  tasks:
+    - name: Reboot T-Pot
+      ansible.builtin.reboot:
+        msg: "Rebooting T-Pot to activate kernel lockdown"
+        reboot_timeout: 1200
+        test_command: "cat /sys/kernel/security/lockdown"
+
+- name: Reboot Wazuh for lockdown
+  hosts: wazuh
+  become: yes
+  tasks:
+    - name: Reboot Wazuh
+      ansible.builtin.reboot:
+        msg: "Rebooting Wazuh to activate kernel lockdown"
+        reboot_timeout: 1200
+        test_command: "cat /sys/kernel/security/lockdown"

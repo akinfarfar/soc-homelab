@@ -1,0 +1,37 @@
+- name: Kernel hardening for SOC lab
+  hosts: wazuh:tpot
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Apply kernel hardening sysctls
+      ansible.builtin.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/99-soc-homelab-hardening.conf
+        state: present
+        reload: yes
+      loop:
+        - { name: 'kernel.unprivileged_bpf_disabled', value: '1' }
+        - { name: 'kernel.kptr_restrict', value: '2' }
+        - { name: 'kernel.dmesg_restrict', value: '1' }
+        - { name: 'kernel.perf_event_paranoid', value: '3' }
+        - { name: 'kernel.yama.ptrace_scope', value: '1' }
+        - { name: 'fs.protected_hardlinks', value: '1' }
+        - { name: 'fs.protected_symlinks', value: '1' }
+
+    - name: Ensure auditd is enabled and running
+      ansible.builtin.systemd:
+        name: auditd
+        enabled: yes
+        state: started
+      ignore_errors: yes
+
+    - name: Check lockdown status
+      ansible.builtin.shell: 'cat /sys/kernel/security/lockdown 2>/dev/null || true'
+      register: lockdown
+      changed_when: false
+
+    - name: Show lockdown status
+      ansible.builtin.debug:
+        var: lockdown.stdout

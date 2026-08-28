@@ -1,0 +1,57 @@
+- name: Stage kernel lockdown boot parameter
+  hosts: wazuh:tpot
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Backup grub defaults
+      copy:
+        src: /etc/default/grub
+        dest: /etc/default/grub.bak
+        remote_src: yes
+
+    - name: Append lockdown=integrity to GRUB_CMDLINE_LINUX_DEFAULT if missing
+      lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="(.*)"$'
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="\1 lockdown=integrity"'
+        backrefs: yes
+      register: grubedit
+
+    - name: Show grub cmdline
+      shell: grep '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub
+      register: grubline
+      changed_when: false
+
+    - debug:
+        var: grubline.stdout
+
+    - name: Update grub
+      command: update-grub
+      register: updategrub
+      changed_when: true
+
+    - debug:
+        var: updategrub.stdout_lines
+
+- name: Add GRUB config audit watches
+  hosts: wazuh:tpot
+  become: yes
+  tasks:
+    - name: Install grub audit rules
+      copy:
+        dest: /etc/audit/rules.d/grub-hardening.rules
+        owner: root
+        group: root
+        mode: '0640'
+        content: |
+          -w /etc/default/grub -p wa -k grub_config
+          -w /boot/grub/grub.cfg -p wa -k grub_cfg
+
+    - name: Load audit rules
+      command: augenrules --load
+
+    - name: Restart auditd
+      systemd:
+        name: auditd
+        state: restarted
+        enabled: yes

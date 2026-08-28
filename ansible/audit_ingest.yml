@@ -1,0 +1,42 @@
+- name: Add audit log collection to Wazuh manager
+  hosts: wazuh
+  become: yes
+  tasks:
+    - name: Append audit log source to ossec.conf
+      ansible.builtin.blockinfile:
+        path: /var/ossec/etc/ossec.conf
+        backup: yes
+        marker: "<!-- {mark} SOC HOMELAB AUDIT -->"
+        insertbefore: "</ossec_config>"
+        block: |
+          <localfile>
+            <log_format>audit</log_format>
+            <location>/var/log/audit/audit.log</location>
+          </localfile>
+
+    - name: Restart Wazuh manager
+      ansible.builtin.systemd:
+        name: wazuh-manager
+        state: restarted
+
+- name: Add audit log collection to T-Pot agent
+  hosts: tpot
+  become: yes
+  tasks:
+    - name: Append audit log source to ossec.conf
+      ansible.builtin.blockinfile:
+        path: /var/ossec/etc/ossec.conf
+        backup: yes
+        marker: "<!-- {mark} SOC HOMELAB AUDIT -->"
+        insertbefore: "</ossec_config>"
+        block: |
+          <localfile>
+            <log_format>audit</log_format>
+            <location>/var/log/audit/audit.log</location>
+          </localfile>
+
+    - name: Restart Wazuh agent
+      ansible.builtin.shell: |
+        systemctl restart wazuh-agent 2>/dev/null || \
+        systemctl restart wazuh 2>/dev/null || true
+      changed_when: true

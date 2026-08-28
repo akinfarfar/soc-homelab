@@ -1,0 +1,39 @@
+- name: Trigger Wazuh Active Response
+  hosts: wazuh
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Authenticate to Wazuh API
+      uri:
+        url: https://127.0.0.1:55000/security/user/authenticate
+        method: POST
+        user: wazuh-wui
+        password: "{{ lookup('env', 'WAZUH_WUI_PASS') }}"
+        force_basic_auth: yes
+        validate_certs: no
+        return_content: yes
+      register: auth
+
+    - name: Save token
+      set_fact:
+        wazuh_token: "{{ auth.json.data.token }}"
+
+    - name: Trigger blacklist-ipset on T-Pot agent
+      uri:
+        url: https://127.0.0.1:55000/active-response?agents_list=001
+        method: PUT
+        headers:
+          Authorization: "Bearer {{ wazuh_token }}"
+        body_format: json
+        body:
+          command: "!blacklist-ipset"
+          arguments:
+            - "198.51.100.23"
+        validate_certs: no
+        return_content: yes
+      register: ar
+
+    - name: Show API result
+      debug:
+        var: ar.json

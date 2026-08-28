@@ -1,0 +1,130 @@
+- name: Baseline - Wazuh
+  hosts: wazuh
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Hostname
+      command: hostname
+      register: hn
+      changed_when: false
+
+    - name: IP addresses
+      command: ip -br a
+      register: ipa
+      changed_when: false
+
+    - name: Important services
+      shell: |
+        systemctl is-active wazuh-manager 2>/dev/null || true
+        systemctl is-active wazuh-indexer 2>/dev/null || true
+        systemctl is-active wazuh-dashboard 2>/dev/null || true
+        systemctl is-active auditd 2>/dev/null || true
+      register: svc
+      changed_when: false
+
+    - name: Listening ports
+      shell: ss -lntup | egrep ':(1514|1515|55000|5601)\b' || true
+      register: ports
+      changed_when: false
+
+    - name: Docker containers
+      shell: |
+        {% raw %}
+        docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}' 2>/dev/null || true
+        {% endraw %}
+      register: dps
+      changed_when: false
+      failed_when: false
+
+    - name: Summary
+      debug:
+        msg:
+          - "HOST={{ hn.stdout }}"
+          - "IP={{ ipa.stdout_lines }}"
+          - "SERVICES={{ svc.stdout_lines }}"
+          - "PORTS={{ ports.stdout_lines }}"
+          - "DOCKER={{ dps.stdout_lines }}"
+
+- name: Baseline - T-Pot
+  hosts: tpot
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Hostname
+      command: hostname
+      register: hn
+      changed_when: false
+
+    - name: IP addresses
+      command: ip -br a
+      register: ipa
+      changed_when: false
+
+    - name: Important services
+      shell: |
+        systemctl is-active docker 2>/dev/null || true
+        systemctl is-active ssh 2>/dev/null || true
+        systemctl is-active ufw 2>/dev/null || true
+      register: svc
+      changed_when: false
+
+    - name: Listening ports
+      shell: ss -lntup | head -n 80
+      register: ports
+      changed_when: false
+
+    - name: Docker containers
+      shell: |
+        {% raw %}
+        docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}' 2>/dev/null || true
+        {% endraw %}
+      register: dps
+      changed_when: false
+      failed_when: false
+
+    - name: Summary
+      debug:
+        msg:
+          - "HOST={{ hn.stdout }}"
+          - "IP={{ ipa.stdout_lines }}"
+          - "SERVICES={{ svc.stdout_lines }}"
+          - "PORTS={{ ports.stdout_lines }}"
+          - "DOCKER={{ dps.stdout_lines }}"
+
+- name: Baseline - MISP
+  hosts: misp
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Hostname
+      command: hostname
+      register: hn
+      changed_when: false
+
+    - name: IP addresses
+      command: ip -br a
+      register: ipa
+      changed_when: false
+
+    - name: Important services
+      shell: |
+        systemctl is-active apache2 2>/dev/null || true
+        systemctl is-active nginx 2>/dev/null || true
+        systemctl is-active mariadb 2>/dev/null || true
+        systemctl is-active redis-server 2>/dev/null || true
+        systemctl is-active docker 2>/dev/null || true
+      register: svc
+      changed_when: false
+
+    - name: Listening ports
+      shell: ss -lntup | egrep ':(80|443|3306|6379)\b' || true
+      register: ports
+      changed_when: false
+
+    - name: Summary
+      debug:
+        msg:
+          - "HOST={{ hn.stdout }}"
+          - "IP={{ ipa.stdout_lines }}"
+          - "SERVICES={{ svc.stdout_lines }}"
+          - "PORTS={{ ports.stdout_lines }}"

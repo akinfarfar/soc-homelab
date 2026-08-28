@@ -20,3 +20,4 @@ secrets/**/*.log
 
 # Gerçek IP'ler ve altyapı bilgisi — repo public olacağı için asla commit edilmemeli
 ansible/inventory/group_vars/all/vault_ips.yml
+*.deb

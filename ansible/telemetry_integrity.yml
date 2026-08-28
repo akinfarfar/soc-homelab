@@ -1,0 +1,75 @@
+- name: Telemetry integrity check
+  hosts: wazuh,tpot
+  become: yes
+  gather_facts: no
+
+  vars:
+    canary_path: /var/tmp/ebpf-canary.txt
+
+  tasks:
+    - name: Capture UTC timestamp
+      ansible.builtin.command: date -u
+      register: now
+      changed_when: false
+
+    - name: T-Pot audit snapshot
+      when: inventory_hostname == 'tpot-sandbox'
+      block:
+        - name: Check auditd state
+          ansible.builtin.command: systemctl is-active auditd
+          register: auditd_state
+          failed_when: false
+          changed_when: false
+
+        - name: Read recent audit log
+          ansible.builtin.shell: tail -n 80 /var/log/audit/audit.log 2>/dev/null || true
+          register: audit_tail
+          changed_when: false
+
+        - name: Read active response log
+          ansible.builtin.shell: tail -n 50 /var/ossec/logs/active-responses.log 2>/dev/null || true
+          register: ar_tail
+          changed_when: false
+
+        - name: Check canary file status
+          ansible.builtin.shell: |
+            if [ -e "{{ canary_path }}" ]; then
+              stat -c 'exists size=%s mtime=%y path=%n' "{{ canary_path }}"
+            else
+              echo 'missing'
+            fi
+          register: canary_status
+          changed_when: false
+
+        - name: Show T-Pot snapshot
+          ansible.builtin.debug:
+            msg:
+              - "HOST={{ inventory_hostname }}"
+              - "TIME={{ now.stdout }}"
+              - "AUDITD={{ auditd_state.stdout | default('unknown') }}"
+              - "CANARY={{ canary_status.stdout }}"
+              - "AUDIT_TAIL={{ audit_tail.stdout_lines }}"
+              - "AR_TAIL={{ ar_tail.stdout_lines }}"
+
+    - name: Wazuh snapshot
+      when: inventory_hostname == 'wazuh-sandbox'
+      block:
+        - name: Read recent alerts
+          ansible.builtin.shell: |
+            grep -n "ebpf-canary.txt\|File added to the system\|Integrity checksum changed\|PAM: Login session opened\|Successful sudo to ROOT executed" /var/ossec/logs/alerts/alerts.json | tail -n 120 || true
+          register: wazuh_alerts
+          changed_when: false
+
+        - name: Read FortiGate visibility log
+          ansible.builtin.shell: |
+            grep -n "10.10.10.30\|10.10.10.20\|192.168.20.10\|policyid=1\|policyid=3\|internal-to-wan\|dmz-to-wazuh-agent" /var/log/fortigate.log | tail -n 120 || true
+          register: forti_log
+          changed_when: false
+
+        - name: Show Wazuh snapshot
+          ansible.builtin.debug:
+            msg:
+              - "HOST={{ inventory_hostname }}"
+              - "TIME={{ now.stdout }}"
+              - "WAZUH_ALERTS={{ wazuh_alerts.stdout_lines }}"
+              - "FORTIGATE_LOG={{ forti_log.stdout_lines }}"

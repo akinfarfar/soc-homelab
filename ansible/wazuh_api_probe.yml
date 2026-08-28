@@ -1,0 +1,34 @@
+- name: Wazuh API probe
+  hosts: wazuh
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Authenticate to Wazuh API
+      uri:
+        url: https://127.0.0.1:55000/security/user/authenticate
+        method: POST
+        user: wazuh-wui
+        password: "{{ lookup('env', 'WAZUH_WUI_PASS') }}"
+        force_basic_auth: yes
+        validate_certs: no
+        return_content: yes
+      register: auth
+
+    - name: Save token
+      set_fact:
+        wazuh_token: "{{ auth.json.data.token }}"
+
+    - name: Query agent list
+      uri:
+        url: https://127.0.0.1:55000/agents?limit=5
+        method: GET
+        headers:
+          Authorization: "Bearer {{ wazuh_token }}"
+        validate_certs: no
+        return_content: yes
+      register: agents
+
+    - name: Show agent response
+      debug:
+        var: agents.json

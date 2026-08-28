@@ -1,0 +1,34 @@
+- name: Wazuh alerts probe
+  hosts: wazuh
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Authenticate to Wazuh API
+      uri:
+        url: https://127.0.0.1:55000/security/user/authenticate
+        method: POST
+        user: wazuh-wui
+        password: "{{ lookup('env', 'WAZUH_WUI_PASS') }}"
+        force_basic_auth: yes
+        validate_certs: no
+        return_content: yes
+      register: auth
+
+    - name: Save token
+      set_fact:
+        wazuh_token: "{{ auth.json.data.token }}"
+
+    - name: Get latest alerts
+      uri:
+        url: "https://127.0.0.1:55000/alerts?limit=10&offset=0&sort=-timestamp"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ wazuh_token }}"
+        validate_certs: no
+        return_content: yes
+      register: alerts
+
+    - name: Show alerts
+      debug:
+        var: alerts.json

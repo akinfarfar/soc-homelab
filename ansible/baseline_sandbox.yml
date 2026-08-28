@@ -1,0 +1,95 @@
+- name: Baseline Wazuh sandbox
+  hosts: wazuh
+  become: yes
+  tasks:
+    - name: Hostname
+      ansible.builtin.command: hostname -f
+      register: hostn
+
+    - name: IP addresses
+      ansible.builtin.command: ip -br addr
+      register: ipbr
+
+    - name: Services
+      ansible.builtin.shell: |
+        systemctl is-active wazuh-manager 2>/dev/null || systemctl is-active wazuh 2>/dev/null || true
+        systemctl is-active auditd 2>/dev/null || true
+      register: svc
+
+    - name: Listening ports
+      ansible.builtin.shell: ss -ltnp | sed -n '1,40p'
+      register: ports
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg:
+          - "HOST={{ hostn.stdout }}"
+          - "IP={{ ipbr.stdout_lines }}"
+          - "SERVICES={{ svc.stdout_lines }}"
+          - "PORTS={{ ports.stdout_lines }}"
+
+- name: Baseline MISP sandbox
+  hosts: misp
+  become: yes
+  tasks:
+    - name: Hostname
+      ansible.builtin.command: hostname -f
+      register: hostn
+
+    - name: IP addresses
+      ansible.builtin.command: ip -br addr
+      register: ipbr
+
+    - name: Services
+      ansible.builtin.shell: |
+        systemctl is-active docker 2>/dev/null || true
+        docker ps --format 'table {% raw %}{{.Names}}\t{{.Image}}\t{{.Status}}{% endraw %}' 2>/dev/null || true
+      register: svc
+
+    - name: Listening ports
+      ansible.builtin.shell: ss -ltnp | sed -n '1,40p'
+      register: ports
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg:
+          - "HOST={{ hostn.stdout }}"
+          - "IP={{ ipbr.stdout_lines }}"
+          - "SERVICES={{ svc.stdout_lines }}"
+          - "PORTS={{ ports.stdout_lines }}"
+
+- name: Baseline T-Pot sandbox
+  hosts: tpot
+  become: yes
+  tasks:
+    - name: Hostname
+      ansible.builtin.command: hostname -f
+      register: hostn
+
+    - name: IP addresses
+      ansible.builtin.command: ip -br addr
+      register: ipbr
+
+    - name: Services
+      ansible.builtin.shell: |
+        systemctl is-active wazuh-agent 2>/dev/null || systemctl is-active wazuh 2>/dev/null || true
+        systemctl is-active auditd 2>/dev/null || true
+      register: svc
+
+    - name: Listening ports
+      ansible.builtin.shell: ss -ltnp | sed -n '1,40p'
+      register: ports
+
+    - name: Show Wazuh config lines
+      ansible.builtin.shell: |
+        grep -n -A3 -B3 "/var/log/audit/audit.log\|/etc/default/grub\|/etc/sysctl.d\|/var/ossec/active-response/bin/blacklist-ipset.sh" /var/ossec/etc/ossec.conf | sed -n '1,120p' || true
+      register: wazconf
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg:
+          - "HOST={{ hostn.stdout }}"
+          - "IP={{ ipbr.stdout_lines }}"
+          - "SERVICES={{ svc.stdout_lines }}"
+          - "PORTS={{ ports.stdout_lines }}"
+          - "WAZUHCONF={{ wazconf.stdout_lines }}"

@@ -1,0 +1,14 @@
+---
+- name: Reload Auditd
+  ansible.builtin.command: augenrules --load
+  notify: Restart Auditd Service
+
+- name: Restart Auditd Service
+  ansible.builtin.systemd:
+    name: auditd
+    state: restarted
+
+- name: Restart Wazuh Agent
+  ansible.builtin.systemd:
+    name: "{{ 'wazuh-manager' if 'wazuh' in group_names else 'wazuh-agent' }}"
+    state: restarted

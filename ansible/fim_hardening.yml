@@ -1,0 +1,36 @@
+- name: Add SOC-specific FIM paths to Wazuh manager
+  hosts: wazuh
+  become: yes
+  tasks:
+    - name: Add FIM paths
+      ansible.builtin.blockinfile:
+        path: /var/ossec/etc/ossec.conf
+        marker: "<!-- {mark} SOC HOMELAB FIM -->"
+        insertbefore: "</syscheck>"
+        block: |
+          <directories realtime="yes" check_all="yes" report_changes="yes">/etc/default/grub,/etc/default/grub.d,/etc/sysctl.d</directories>
+          <directories realtime="yes" check_all="yes" report_changes="yes">/var/ossec/etc,/var/ossec/etc/rules</directories>
+
+    - name: Restart Wazuh manager
+      ansible.builtin.systemd:
+        name: wazuh-manager
+        state: restarted
+
+- name: Add SOC-specific FIM paths to T-Pot agent
+  hosts: tpot
+  become: yes
+  tasks:
+    - name: Add FIM paths
+      ansible.builtin.blockinfile:
+        path: /var/ossec/etc/ossec.conf
+        marker: "<!-- {mark} SOC HOMELAB FIM -->"
+        insertbefore: "</syscheck>"
+        block: |
+          <directories realtime="yes" check_all="yes" report_changes="yes">/etc/default/grub,/etc/default/grub.d,/etc/sysctl.d</directories>
+          <directories realtime="yes" check_all="yes" report_changes="yes">/var/ossec/etc,/var/ossec/active-response/bin</directories>
+
+    - name: Restart Wazuh agent
+      ansible.builtin.shell: |
+        systemctl restart wazuh-agent 2>/dev/null || \
+        systemctl restart wazuh 2>/dev/null || true
+      changed_when: true

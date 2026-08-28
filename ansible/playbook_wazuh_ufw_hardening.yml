@@ -1,0 +1,6 @@
+---
+- name: Harden Wazuh dashboard exposure at the host firewall layer
+  hosts: wazuh-server
+  become: true
+  roles:
+    - wazuh_ufw_hardening

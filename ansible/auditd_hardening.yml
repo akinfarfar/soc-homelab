@@ -1,0 +1,77 @@
+- name: Install and configure auditd on Wazuh
+  hosts: wazuh
+  become: yes
+  tasks:
+    - name: Install auditd
+      apt:
+        name: auditd
+        state: present
+        update_cache: yes
+
+    - name: Install Wazuh audit rules
+      copy:
+        dest: /etc/audit/rules.d/soc-homelab.rules
+        owner: root
+        group: root
+        mode: '0640'
+        content: |
+          -w /var/ossec/etc/ossec.conf -p wa -k wazuh_conf
+          -w /var/ossec/etc/rules/local_rules.xml -p wa -k wazuh_rules
+          -w /etc/sysctl.d/99-soc-homelab-hardening.conf -p wa -k hardening
+
+    - name: Load Wazuh audit rules
+      command: augenrules --load
+
+    - name: Enable and start auditd
+      systemd:
+        name: auditd
+        enabled: yes
+        state: started
+
+    - name: Show loaded rules
+      command: auditctl -l
+      register: audit_rules
+      changed_when: false
+
+    - debug:
+        var: audit_rules.stdout_lines
+
+- name: Install and configure auditd on T-Pot
+  hosts: tpot
+  become: yes
+  tasks:
+    - name: Install auditd
+      apt:
+        name: auditd
+        state: present
+        update_cache: yes
+
+    - name: Install T-Pot audit rules
+      copy:
+        dest: /etc/audit/rules.d/soc-homelab.rules
+        owner: root
+        group: root
+        mode: '0640'
+        content: |
+          -w /home/ubuntu/tpotce/data/tpot/etc/compose/elk_environment -p wa -k tpot_env
+          -w /home/ubuntu/tpotce/data/nginx/conf/tpotweb.conf -p wa -k tpot_nginx
+          -w /var/ossec/active-response/bin/blacklist-ipset.sh -p wa -k tpot_ar
+          -w /var/ossec/logs/active-responses.log -p wa -k tpot_arlog
+          -w /etc/sysctl.d/99-soc-homelab-hardening.conf -p wa -k hardening
+
+    - name: Load T-Pot audit rules
+      command: augenrules --load
+
+    - name: Enable and start auditd
+      systemd:
+        name: auditd
+        enabled: yes
+        state: started
+
+    - name: Show loaded rules
+      command: auditctl -l
+      register: audit_rules
+      changed_when: false
+
+    - debug:
+        var: audit_rules.stdout_lines
