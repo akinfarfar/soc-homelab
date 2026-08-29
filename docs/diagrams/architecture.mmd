@@ -1,0 +1,53 @@
+graph TB
+    Internet[İnternet]
+
+    subgraph Perimeter["Perimeter Katmanı"]
+        CF_WAF[Cloudflare WAF + Zero Trust Access]
+        CF_DNS[Cloudflare DNS-only]
+        FG[FortiGate NGFW<br/>bağımsız perimeter]
+    end
+
+    subgraph Detection["Tespit Katmanı"]
+        TPOT[T-Pot Honeypot Fleet<br/>30+ servis: Cowrie, Dionaea,<br/>Heralding, H0neytr4p]
+        Suricata[Suricata IDS]
+        Wazuh[Wazuh SIEM<br/>tek node: Indexer+Manager+Dashboard]
+        ClickDetect[ClickDetect<br/>Sigma/MITRE ATT&CK eşleme]
+    end
+
+    subgraph Intel["Tehdit İstihbaratı"]
+        MISP[MISP<br/>ayrı sunucu, kendi IoC üretimi]
+    end
+
+    subgraph Orchestration["Otomasyon / SOAR"]
+        N8N[n8n<br/>risk skorlama + orkestrasyon]
+        AR[Wazuh Active Response<br/>otomatik ban]
+        Dashboard[SOC Triage Dashboard]
+    end
+
+    subgraph Ops["Operasyonel Olgunluk"]
+        HealthMon[Health Monitor<br/>bağımsız nabız kontrolü]
+        CaseMgr[Case Manager<br/>SQLite + otomatik/manuel kapatma]
+    end
+
+    Internet --> CF_WAF
+    Internet --> CF_DNS
+    CF_WAF --> Wazuh
+    CF_DNS --> TPOT
+
+    TPOT --> Suricata
+    Suricata --> Wazuh
+    TPOT -->|agent| Wazuh
+    FG -->|syslog| Wazuh
+    Wazuh --> ClickDetect
+
+    ClickDetect --> N8N
+    N8N --> MISP
+    N8N --> AR
+    N8N --> Dashboard
+
+    Wazuh -.->|izler| HealthMon
+    HealthMon -.->|bağımsız, Wazuh'a bağımlı değil| Internet
+    Wazuh --> CaseMgr
+
+    style HealthMon fill:#f9d5d3
+    style CaseMgr fill:#d3e5f9
