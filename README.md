@@ -6,6 +6,8 @@ Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unu
 
 **[Tam yazı dizisini Medium'da okuyun →](https://medium.com/@akinfarfar/s%C4%B1f%C4%B1rdan-%C3%BCretim-seviyesine-bir-soc-analistinin-homelab-ve-operasyon-rehberi-452a73debdde)**
 
+[![Secrets Scan](https://github.com/akinfarfar/soc-homelab/actions/workflows/secrets-scan.yml/badge.svg)](https://github.com/akinfarfar/soc-homelab/actions/workflows/secrets-scan.yml)
+
 ---
 
 ## İçindekiler
@@ -15,7 +17,9 @@ Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unu
 - [Dört Evre](#dört-evre)
 - [Teknoloji Yığını](#teknoloji-yığını)
 - [Ölçülebilir Sonuçlar](#ölçülebilir-sonuçlar)
+- [Ekran Görüntüleri](#ekran-görüntüleri)
 - [Repo Yapısı](#repo-yapısı)
+- [Bu Projeyi Yeniden Kurmak](#bu-projeyi-yeniden-kurmak)
 - [Öne Çıkan Mühendislik Kararları](#öne-çıkan-mühendislik-kararları)
 - [Yazı Dizisi](#yazı-dizisi)
 - [İletişim](#i̇letişim)
@@ -45,9 +49,13 @@ Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unu
                                                 │
                                                 └──► Active Response (otomatik ban)
                                                 └──► SOC Triage Dashboard
+                                      │
+                            Health Monitor (bağımsız nabız kontrolü) ─┐
+                                      │                                │
+                            Case Manager (SQLite, otomatik/manuel kapatma)
 ```
 
-Detaylı topoloji diyagramları Medium serisindeki ilgili makalelerde yer alıyor.
+Detaylı topoloji diyagramı `docs/diagrams/architecture.mmd`'de (Mermaid) ve Medium serisindeki ilgili makalelerde yer alıyor.
 
 ---
 
@@ -65,13 +73,13 @@ Her kriz, her yanlış varsayım ve her düzeltme, gizlenmek yerine belgelendi. 
 Wazuh SIEM (tek node üzerinde 3 bileşen: Indexer + Manager + Dashboard — cluster modu bilinçli olarak kullanılmıyor), T-Pot honeypot ağı (30+ servis), FortiGate NGFW, Cloudflare WAF/DNS. Splunk'tan Wazuh'a mimari geçiş, FortiGate'in `auto-asic-offload` IPS bypass bug'ının paket seviyesinde teşhisi, Geo-IP engellemenin dürüst şekilde "doğrulanamadı" olarak belgelenmesi.
 
 ### 2- Kod ve Otomasyon
-Ansible ile Infrastructure as Code, age+sops ile secrets şifreleme, MISP ile kendi tehdit istihbaratının üretilmesi, Sigma kurallarının ClickDetect+Lucene DSL üzerinden platformdan bağımsızlaştırılması, n8n ile risk-bazlı otomatik triage.
+Ansible ile Infrastructure as Code, age+sops ve ansible-vault ile secrets şifreleme, MISP ile kendi tehdit istihbaratının üretilmesi (+ CIRCL/Botvrij.eu dış feed entegrasyonu, 630K+ attribute), Sigma kurallarının ClickDetect+Lucene DSL üzerinden platformdan bağımsızlaştırılması, n8n ile risk-bazlı otomatik triage.
 
 ### 3- Kernel Seviyesinde Araştırma
 eBPF tabanlı telemetri manipülasyonu tehdit modeli, `auditd`+Wazuh ile tespit katmanı, Docker/runc'un meşru `bpf()` kullanımı bulunduğunda önlemenin risk-temelli olarak izole bir VMware sandbox'ına ertelenmesi, ve dört katmanlı bir kaynak güven skorlama modelinin tasarlanması.
 
-### 4️- Operasyonel Olgunluk
-Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor katmanı, log gürültüsü azaltma, MDR/EDR/XDR benzeri genişleme (Case Manager, LLM tabanlı alarm triaj, XDR zaman çizelgesi), ve "gözlemciyi kim izliyor?" sorusuna verilen gerçek bir cevap.
+### 4- Operasyonel Olgunluk
+Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor katmanı (+ Wazuh Manager'dan tamamen bağımsız bir nabız kontrolü), log gürültüsü azaltma, MDR/EDR/XDR benzeri genişleme (Case Manager, LLM tabanlı alarm triaj, XDR zaman çizelgesi), "gözlemciyi kim izliyor?" sorusuna verilen gerçek bir cevap, ve periyodik bir güvenlik denetiminin (Aşama 1/2) kendi bulgularını bir sonraki adıma (CI'da otomatik secrets taraması) dönüştürmesi.
 
 ---
 
@@ -82,9 +90,10 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 | SIEM / Tespit | Wazuh, Sigma Rules, ClickDetect, MITRE ATT&CK |
 | Honeypot / IDS | T-Pot (Cowrie, Dionaea, Heralding, H0neytr4p), Suricata |
 | Perimeter | FortiGate NGFW, Cloudflare WAF/Access, OCI Security List / NSG |
-| Tehdit İstihbaratı | MISP, AbuseIPDB, Spamhaus |
+| Tehdit İstihbaratı | MISP (+ CIRCL OSINT, Botvrij.eu), AbuseIPDB, Spamhaus |
 | Otomasyon / SOAR | n8n, Wazuh Active Response, Google Gemini (LLM triaj) |
-| Altyapı | Ansible, Docker, age + sops, GPG |
+| Altyapı | Ansible, Docker, age + sops, ansible-vault, GPG |
+| CI / Güvenlik | GitHub Actions, gitleaks (her push'ta otomatik secrets taraması) |
 | Güvenlik Araştırması | auditd, bpftool, kernel lockdown, eBPF tehdit modellemesi |
 | Bulut | Oracle Cloud Infrastructure (ARM64/Always Free), Hetzner |
 
@@ -99,9 +108,18 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 | Tespit edilen kampanya | 13 gün, otomasyonun %86'sını kaçırdığı bir RDP keşif kampanyası |
 | T-Pot disk kullanımı iyileştirmesi | %79 → %42 (kullanılmayan ELK stack kaldırılarak) |
 | MISP tehdit istihbaratı kaydı | 630.000+ attribute |
-| Ansible ile kodlanan rol sayısı | 9+ (idempotent, `--check --diff` ile doğrulanmış) |
+| Ansible ile kodlanan rol sayısı | 20 (idempotent, `--check --diff` ile doğrulanmış) |
 | Ağ segmentasyonu | 5 NSG, 53 kural |
-| Credential/IP sızıntısı bulunup temizlenen | 2 API key (Faz 2) + 5 gerçek production IP (güvenlik denetimi) — iki ayrı `git-filter-repo` geçişiyle |
+| Credential/IP/domain sızıntısı bulunup temizlenen | 2 API key (Faz 2) + 5 gerçek production IP + 1 domain adı (DNS üzerinden dolaylı IP sızıntısı) — `git-filter-repo` ile geçmiş temizliği + vault'a taşıma |
+| CI ile otomatikleştirilen kontrol | Her push'ta gitleaks secrets taraması (bkz. rozet yukarıda) |
+
+---
+
+## Ekran Görüntüleri
+
+| Prod Health Status | Kaynak Sağlığı | XDR Zaman Çizelgesi |
+|---|---|---|
+| ![Prod Health Status](docs/screenshots/prod-health-status.png) | ![Source Health](docs/screenshots/source-health.png) | ![XDR Timeline](docs/screenshots/xdr-timeline-host.png) |
 
 ---
 
@@ -109,20 +127,42 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 
 ```
 soc-homelab/
+├── .github/
+│   └── workflows/
+│       └── secrets-scan.yml    # her push'ta gitleaks ile otomatik secrets taraması
 ├── ansible/
-│   ├── inventory/          # host envanteri, group_vars (vault ile şifreli)
-│   ├── roles/               # hardening, wazuh_install, tpot_install,
-│   │                         # fortigate_syslog, wazuh_custom_rules,
-│   │                         # tpot_active_response, tpot_blacklist, ...
+│   ├── inventory/               # host envanteri, group_vars (vault ile şifreli)
+│   ├── roles/                    # hardening_ssh, hardening_ebpf, wazuh_install,
+│   │                              # tpot_install, wazuh_ufw_hardening,
+│   │                              # wazuh_custom_rules (+ clickdetect_examples/),
+│   │                              # health_monitor, case_manager,
+│   │                              # clickdetect_llm_triage, fortigate_admin_ip, ...
 │   └── playbooks/
-├── secrets/                  # age+sops ile şifrelenmiş, host-bazlı segmentli
+├── configs/
+│   ├── systemd/                  # wazuh-manager auto-restart override
+│   └── logrotate/                # health-monitor/case-manager log rotasyonu
+├── dashboards/
+│   └── wazuh-dashboard-panels.ndjson  # Dashboard saved objects export
 ├── docs/
-│   └── incidents.md          # yapılandırılmış olay günlüğü (Bağlam/Semptom/
-│                              # Teşhis/Kök neden/Çözüm/Ders şablonu)
+│   ├── diagrams/                 # mimari diyagram (Mermaid)
+│   ├── screenshots/               # Dashboard ekran görüntüleri
+│   ├── incidents.md               # yapılandırılmış olay günlüğü (Bağlam/Semptom/
+│   │                               # Teşhis/Kök neden/Çözüm/Ders şablonu)
+│   └── REPRODUCIBILITY.md         # kurulum sırası, ön koşullar, notlar
+├── n8n/
+│   └── soc-triage-workflow.json  # risk skorlama + MISP zenginleştirme workflow'u
+├── secrets/                       # age+sops ile şifrelenmiş, host-bazlı segmentli
+├── LICENSE
 └── README.md
 ```
 
-> **Not:** `secrets/` ve `inventory/group_vars/` içeriği tamamen şifrelidir (age + sops / ansible-vault). Repo public olsa bile hiçbir gerçek credential veya IP düz metin olarak bulunmaz — git geçmişi de `git-filter-repo` ile bir kez temizlenmiştir.
+> **Not:** `secrets/` ve `inventory/group_vars/` içeriği tamamen şifrelidir (age + sops / ansible-vault). Repo public olsa bile hiçbir gerçek credential veya IP düz metin olarak bulunmaz — git geçmişi `git-filter-repo` ile bir kez temizlenmiş, ve bu artık her push'ta gitleaks CI'ı ile **otomatik olarak** doğrulanıyor (bkz. yukarıdaki rozet).
+
+---
+
+## Bu Projeyi Yeniden Kurmak
+
+Roller birbirine bağımlı, doğru sırada uygulanmaları gerekiyor. Ön koşullar, kurulum sırası ve önemli notlar (secrets yönetimi, n8n credential yeniden bağlama, hostname çakışmasından kaçınma) için: **[docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)**
 
 ---
 
@@ -135,6 +175,7 @@ Bu proje boyunca tekrar eden tema: **hiçbir güvenlik kontrolü, kendi başına
 - **"Bir önlemi uygulamadan önce sorgula"** — kernel lockdown'ı devreye almadan önce, Docker'ın kendi meşru `bpf()` kullanımı bulunup önleme katmanı sandbox doğrulamasına ertelendi.
 - **"Yerel bir servisin sağlıklı görünmesi, gerçekte çalıştığı anlamına gelmez"** — T-Pot'un agent'ı 7 saattir Manager'a bağlı değilken yerel `systemctl status` "active" gösteriyordu.
 - **"Gözlemciyi kim izliyor?"** — tüm alarm zincirinin tek dayanağı Wazuh Manager'ın kendisiydi; systemd auto-restart + tamamen bağımsız bir nabız kontrolüyle çözüldü.
+- **"Bir düzeltmenin daha önce yapılmış olması, kalıcı olduğu anlamına gelmez"** — git geçmişindeki bir IP sızıntısı temizliği daha önce bir kez yapılmış ama sessizce geri gelmişti; kalıcı çözüm otomasyon (CI'da gitleaks) oldu, elle kontrol değil.
 
 Bu kararların her birinin tam teknik dökümü (komutlar, hata mesajları, doğrulama adımları) Medium serisinde yer alıyor.
 
