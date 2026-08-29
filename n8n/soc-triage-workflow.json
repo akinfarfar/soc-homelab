@@ -1,0 +1,596 @@
+[
+    {
+        "updatedAt": "2026-07-09T18:39:40.000Z",
+        "createdAt": "2026-07-09T18:09:51.084Z",
+        "id": "pTZi0Ljjj0OGsWfA",
+        "name": "My workflow",
+        "description": null,
+        "active": false,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "clickdetect",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2.1,
+                "position": [
+                    0,
+                    0
+                ],
+                "id": "57e3c9b5-f6e4-460d-b5c8-78ce516b87c6",
+                "name": "Webhook",
+                "webhookId": "52ecdcf2-8ef9-4631-852f-ed9db578f948"
+            }
+        ],
+        "connections": {},
+        "settings": {
+            "executionOrder": "v1"
+        },
+        "staticData": null,
+        "meta": null,
+        "nodeGroups": [],
+        "pinData": {},
+        "versionId": "a1357d8f-e6d7-41bd-b62a-03c413459b36",
+        "activeVersionId": null,
+        "versionCounter": 1,
+        "triggerCount": 1,
+        "sourceWorkflowId": null,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-07-09T18:09:51.099Z",
+                "createdAt": "2026-07-09T18:09:51.099Z",
+                "role": "workflow:owner",
+                "workflowId": "pTZi0Ljjj0OGsWfA",
+                "projectId": "nBkpLvwV39z07BX7",
+                "project": {
+                    "updatedAt": "2026-07-09T17:38:27.860Z",
+                    "createdAt": "2026-07-09T17:25:17.617Z",
+                    "id": "nBkpLvwV39z07BX7",
+                    "name": "Akin Farfar <redacted@example.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "customTelemetryTags": [],
+                    "creatorId": "8027f9fa-3502-49b7-9539-2aae32536357"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    },
+    {
+        "updatedAt": "2026-07-28T20:18:27.269Z",
+        "createdAt": "2026-07-09T18:49:14.742Z",
+        "id": "DsTkv4FNiEW0O7HF",
+        "name": "SOC TRIAGE",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://misp.example.com/attributes/restSearch",
+                    "authentication": "genericCredentialType",
+                    "genericAuthType": "httpHeaderAuth",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ { \"value\": $json.primaryIp, \"type\": \"ip-src\", \"limit\": 50 } }}",
+                    "options": {}
+                },
+                "id": "8e08fcd4-2af2-4156-8b35-322994d29c10",
+                "name": "MISP IP Gecmisini Sorgula",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    -848,
+                    -32
+                ],
+                "credentials": {
+                    "httpHeaderAuth": {
+                        "id": "pPT1pnT6E5Ny6t8A",
+                        "name": "Header Auth account"
+                    }
+                },
+                "onError": "continueRegularOutput"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const parsed = $('Parse ClickDetect Alert1').item.json;\nconst rule = parsed.rule;\nconst detector = parsed.detector;\nconst hits = parsed.hits;\nconst ipList = parsed.ipList;\nconst summaryLines = parsed.summaryLines;\n\n// MISP restSearch yanitini esnek sekilde oku\nlet searchResult = {};\ntry {\n  searchResult = $input.first().json || {};\n} catch (e) {\n  searchResult = {};\n}\nconst priorAttributes = (searchResult.response && searchResult.response.Attribute)\n  || searchResult.Attribute\n  || [];\nconst priorCount = Array.isArray(priorAttributes) ? priorAttributes.length : 0;\n\n// --- Genisletilmis IOC cikarma: detector turune gore farkli alanlar mevcut olabilir ---\nconst dstIps = new Set();\nconst ports = new Set();\nconst creds = new Set();\nconst hashes = new Set();\nconst urls = new Set();\n\nfor (const hit of hits) {\n  const d = hit.data || {};\n  if (d.dst_ip) dstIps.add(d.dst_ip);\n  if (d.dst_port) ports.add(String(d.dst_port));\n  if (d.username || d.password) creds.add(`${d.username || '?'} / ${d.password || '?'}`);\n  // Cowrie dosya indirme event'lerinde olabilecek alanlar (ileride file_download/malware_staging kurallari icin)\n  if (d.shasum) hashes.add(d.shasum);\n  if (d.url) urls.add(d.url);\n}\n\n// Bilinen MITRE technique ID'lerini okunabilir isme cevir (sadece su ana kadar gorulenler icin)\nconst techniqueNames = {\n  'attack.t1078': 'T1078 Valid Accounts (calinmis/tahmin edilmis gecerli kimlik bilgisiyle giris)',\n  'attack.t1105': 'T1105 Ingress Tool Transfer (arac/dosya indirme)',\n  'attack.t1110': 'T1110 Brute Force (kaba kuvvet deneme)',\n  'attack.t1133': 'T1133 External Remote Services (dis erisim servisi istismari)',\n  'attack.t1136.001': 'T1136.001 Create Account: Local Account (yeni yerel hesap olusturma)',\n  'attack.t1686.002': 'T1686.002 (savunma mekanizmasi degisikligi)'\n};\nconst readableTechniques = (rule.tags || [])\n  .filter(t => techniqueNames[t])\n  .map(t => `  - ${techniqueNames[t]}`)\n  .join('\\n');\n\nconst repeatComponent = Math.min(priorCount, 10) * 2;\nconst multiHitBonus = hits.length > 1 ? 5 : 0;\nlet score = (rule.level || 0) + repeatComponent + multiHitBonus;\n\n// Tuning (20 Temmuz vardiya bulgusu, 21 Temmuz duzeltmesi):\n// rule.level ClickDetect'in KENDI kural tanimindan geliyor (Wazuh'un ic\n// rule.level'inden FARKLI bir olcek - orn. bu Cowrie kurali icin 12,\n// Wazuh'un kendi 100104 kuralinda ise 14). Sayisal esik yerine, gercek\n// olay tipine (data.eventid) bakmak detector-bagimsiz ve dogru bir kontrol.\nconst isConfirmedSuccess = hits.some(h => (h.data && h.data.eventid) === 'cowrie.login.success');\nconst severityFloor = isConfirmedSuccess ? 15 : 0;\nscore = Math.max(score, severityFloor);\n\nlet riskLabel = 'Dusuk';\nlet shouldEmail = false;\nif (score >= 30) {\n  riskLabel = 'Kritik';\n  shouldEmail = true;\n} else if (score >= 15) {\n  riskLabel = 'Orta';\n  shouldEmail = true;\n}\n\n// --- MISP attribute'lerini olustur (artik daha fazla IOC turu) ---\nconst mispAttributes = ipList.map(ip => ({\n  type: 'ip-src', category: 'Network activity', value: ip,\n  comment: `ClickDetect: ${rule.name} | risk skoru: ${score} (${riskLabel})`, to_ids: true\n}));\ndstIps.forEach(ip => mispAttributes.push({\n  type: 'ip-dst', category: 'Network activity', value: ip,\n  comment: `Hedef sistem - ${rule.name}`, to_ids: false\n}));\nhashes.forEach(h => mispAttributes.push({\n  type: h.length === 64 ? 'sha256' : (h.length === 40 ? 'sha1' : 'md5'),\n  category: 'Payload delivery', value: h, to_ids: true\n}));\nurls.forEach(u => mispAttributes.push({\n  type: 'url', category: 'Payload delivery', value: u, to_ids: true\n}));\nif (creds.size > 0) {\n  mispAttributes.push({\n    type: 'text', category: 'Other',\n    value: `Denenen kimlik bilgileri: ${Array.from(creds).join(', ')}`, to_ids: false\n  });\n}\nmispAttributes.push({\n  type: 'text', category: 'Internal reference',\n  value: `ClickDetect rule ${rule.id} (${rule.name}) triggered ${hits.length} time(s) on detector \"${detector.name}\". Risk skoru: ${score} (${riskLabel}). Bu IP icin MISP'te ${priorCount} onceki kayit bulundu.`,\n  to_ids: false\n});\n\nconst eventTags = (rule.tags || []).map(t => ({ Tag: { name: t } }));\neventTags.push({ Tag: { name: `risk:${riskLabel.toLowerCase()}` } });\n\nconst threatLevel = score >= 30 ? '1' : (score >= 15 ? '2' : '3');\n\nconst mispEventBody = {\n  Event: {\n    info: `ClickDetect: ${rule.name} [Risk: ${riskLabel}, skor: ${score}]`,\n    distribution: '0', threat_level_id: threatLevel, analysis: '0',\n    EventTag: eventTags, Attribute: mispAttributes\n  }\n};\n\n// --- Daha aciklayici, bolumlere ayrilmis e-posta govdesi ---\nconst iocLines = [];\niocLines.push(`Kaynak IP(ler): ${ipList.join(', ') || 'yok'}`);\nif (dstIps.size) iocLines.push(`Hedef IP(ler): ${Array.from(dstIps).join(', ')}`);\nif (ports.size) iocLines.push(`Hedef port(lar): ${Array.from(ports).join(', ')}`);\nif (creds.size) iocLines.push(`Denenen kimlik bilgileri: ${Array.from(creds).join(', ')}`);\nif (hashes.size) iocLines.push(`Dosya hash'leri: ${Array.from(hashes).join(', ')}`);\nif (urls.size) iocLines.push(`URL'ler: ${Array.from(urls).join(', ')}`);\n\nconst emailSubject = `[${riskLabel}] ${rule.name} (skor: ${score}, ${ipList.length} kaynak IP)[ClickDetect]`;\n\nconst emailBody = `RISK SEVIYESI: ${riskLabel} (skor: ${score})\n\nNE OLDU?\n${rule.description}\n${readableTechniques ? '\\nIlgili MITRE ATT&CK teknikleri:\\n' + readableTechniques : ''}\n\nTESPIT EDILEN IOC'LER\n${iocLines.map(l => '  - ' + l).join('\\n')}\n\nBAGLAM\nDetector: ${detector.name} (tenant: ${detector.tenant})\nBu 5 dakikalik pencerede eslesme sayisi: ${hits.length}\nBu kaynak IP MISP'te daha once ${priorCount} kez gorulmus\n\nHAM OLAY KAYITLARI\n${summaryLines}\n\nRISK SKORU HESABI\n  Wazuh kural seviyesi: +${rule.level}\n  Tekrar gecmisi bonusu (max 10x2): +${repeatComponent}\n  Ciddiyet tabani (dogrulanmis basarili giris ise min. Orta garantisi): ${severityFloor > 0 ? '+uygulandi (taban ' + severityFloor + ')' : 'uygulanmadi'}\n  Ayni pencerede coklu eslesme bonusu: +${multiHitBonus}\n  TOPLAM: ${score}`;\n\nreturn [{ json: { mispEventBody, emailSubject, emailBody, ipList, score, riskLabel, shouldEmail } }];"
+                },
+                "id": "fe4b899b-a61c-4435-bff3-21812f3d4ddb",
+                "name": "Risk Hesapla ve Govdeleri Olustur",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    -544,
+                    176
+                ]
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "options": {
+                            "caseSensitive": true,
+                            "leftValue": "",
+                            "typeValidation": "strict",
+                            "version": 1
+                        },
+                        "conditions": [
+                            {
+                                "id": "cond1",
+                                "leftValue": "={{ $('Risk Hesapla ve Govdeleri Olustur').item.json.shouldEmail }}",
+                                "rightValue": true,
+                                "operator": {
+                                    "type": "boolean",
+                                    "operation": "true",
+                                    "singleValue": true
+                                }
+                            }
+                        ],
+                        "combinator": "and"
+                    },
+                    "options": {}
+                },
+                "id": "d23e5e7b-968d-4837-9309-389932a2b1ce",
+                "name": "Yuksek Risk mi?",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 2,
+                "position": [
+                    -64,
+                    272
+                ]
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "clickdetect",
+                    "options": {}
+                },
+                "id": "9c82c6b8-ed7f-48a9-ae99-c76ff7a51364",
+                "name": "Webhook1",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2,
+                "position": [
+                    -1520,
+                    -16
+                ],
+                "webhookId": "clickdetect-webhook"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $input.first().json.body;\nconst rule = body.rule;\nconst detector = body.detector;\nconst hits = (body.data && body.data.value) || [];\n\n// Farkli detector'lar farkli alan adlari kullaniyor:\n// FortiGate -> data.ui icinde \"ssh(1.2.3.4)\" formatinda\n// Cowrie -> data.src_ip dogrudan\n// Heralding -> data.source_ip dogrudan\nconst ipRegex = /(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})/;\nconst ipSet = new Set();\nfor (const hit of hits) {\n  const d = hit.data || {};\n  let ip = d.src_ip || d.source_ip || null;\n  if (!ip && d.ui) {\n    const m = d.ui.match(ipRegex);\n    if (m) ip = m[1];\n  }\n  if (ip) ipSet.add(ip);\n}\nconst ipList = Array.from(ipSet);\n// Not: skorlama simdilik sadece ILK IP'nin MISP gecmisine bakiyor.\n// Coklu farkli IP'li tek alertler nadir (su ana kadar gozlemlenmedi) - ileride gelistirilebilir.\nconst primaryIp = ipList[0] || null;\n\nconst summaryLines = hits.map(h => {\n  const d = h.data || {};\n  return `- [${h['@timestamp']}] ${d.eventid || d.action || '?'} ${d.message || d.cfgpath || '?'} kaynak: ${d.src_ip || d.source_ip || d.ui || '?'}`;\n}).join('\\n');\n\nreturn [{ json: { rule, detector, hits, ipList, primaryIp, summaryLines } }];"
+                },
+                "id": "ff6ade47-1604-4871-bbfa-96a75f60368f",
+                "name": "Parse ClickDetect Alert1",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    -1184,
+                    192
+                ]
+            },
+            {
+                "parameters": {
+                    "fromEmail": "redacted@example.com",
+                    "toEmail": "redacted@example.com",
+                    "subject": "={{ $('Risk Hesapla ve Govdeleri Olustur').item.json.emailSubject }}",
+                    "html": "={{ $('Risk Hesapla ve Govdeleri Olustur').item.json.emailBody }}\n\n---\nMISP Event: https://misp.example.com/events/view/{{ $json.Event.id }}",
+                    "options": {}
+                },
+                "id": "119ef7b1-ef55-4eb6-a901-6b2bee8866bd",
+                "name": "Bildirim Gonder1",
+                "type": "n8n-nodes-base.emailSend",
+                "typeVersion": 2.1,
+                "position": [
+                    160,
+                    368
+                ],
+                "webhookId": "ba8b01e1-d498-4fe5-9099-ad6cdc0f3d70",
+                "credentials": {
+                    "smtp": {
+                        "id": "ugcod9WCv0JwL3mm",
+                        "name": "SMTP account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://misp.example.com/events",
+                    "authentication": "genericCredentialType",
+                    "genericAuthType": "httpHeaderAuth",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Accept",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ $json.mispEventBody }}",
+                    "options": {}
+                },
+                "id": "3ffa2b54-13b3-411a-b951-d26da5da9ee6",
+                "name": "MISP'e Event Ekle",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    -288,
+                    -16
+                ],
+                "credentials": {
+                    "httpHeaderAuth": {
+                        "id": "pPT1pnT6E5Ny6t8A",
+                        "name": "Header Auth account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://172.18.0.1:55000/security/user/authenticate",
+                    "authentication": "genericCredentialType",
+                    "genericAuthType": "httpBasicAuth",
+                    "options": {
+                        "allowUnauthorizedCerts": true
+                    }
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    448,
+                    0
+                ],
+                "id": "32a4c1d6-bc50-471f-8f6e-d839d1967336",
+                "name": "Wazuh Token Al",
+                "credentials": {
+                    "httpBasicAuth": {
+                        "id": "S6ItjNAGNV3Pe5F5",
+                        "name": "Unnamed credential"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "method": "PUT",
+                    "url": "https://172.18.0.1:55000/active-response?agents_list=001",
+                    "sendHeaders": true,
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "Authorization",
+                                "value": "=Bearer {{ $json.data.token }}"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={\n  \"command\": \"!blacklist-ipset\",\n  \"arguments\": [\"{{ $('Split Out').item.json.ipList }}\"]\n}",
+                    "options": {
+                        "allowUnauthorizedCerts": true
+                    }
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    720,
+                    240
+                ],
+                "id": "ed492aa7-7d2d-4ac7-b886-bc8b966c8835",
+                "name": "IP'yi Banla (Active Response)"
+            },
+            {
+                "parameters": {
+                    "fieldToSplitOut": "ipList",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.splitOut",
+                "typeVersion": 1,
+                "position": [
+                    128,
+                    176
+                ],
+                "id": "6f9b5a99-f948-4b7d-aec8-42e76f941cd6",
+                "name": "Split Out"
+            }
+        ],
+        "connections": {
+            "MISP IP Gecmisini Sorgula": {
+                "main": [
+                    [
+                        {
+                            "node": "Risk Hesapla ve Govdeleri Olustur",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Risk Hesapla ve Govdeleri Olustur": {
+                "main": [
+                    [
+                        {
+                            "node": "MISP'e Event Ekle",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Yuksek Risk mi?": {
+                "main": [
+                    [
+                        {
+                            "node": "Split Out",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "Bildirim Gonder1",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Webhook1": {
+                "main": [
+                    [
+                        {
+                            "node": "Parse ClickDetect Alert1",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Parse ClickDetect Alert1": {
+                "main": [
+                    [
+                        {
+                            "node": "MISP IP Gecmisini Sorgula",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "MISP'e Event Ekle": {
+                "main": [
+                    [
+                        {
+                            "node": "Yuksek Risk mi?",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Wazuh Token Al": {
+                "main": [
+                    [
+                        {
+                            "node": "IP'yi Banla (Active Response)",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "IP'yi Banla (Active Response)": {
+                "main": [
+                    []
+                ]
+            },
+            "Split Out": {
+                "main": [
+                    [
+                        {
+                            "node": "Wazuh Token Al",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate"
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "nodeGroups": [],
+        "pinData": {
+            "Webhook1": [
+                {
+                    "json": {
+                        "headers": {
+                            "host": "localhost:5678",
+                            "content-type": "application/json",
+                            "accept": "*/*",
+                            "accept-encoding": "gzip, deflate, br, zstd",
+                            "user-agent": "Python/3.13 aiohttp/3.14.1",
+                            "content-length": "3503"
+                        },
+                        "params": {},
+                        "query": {},
+                        "body": {
+                            "rule": {
+                                "id": "7e1a9e10-1b2a-4b1e-9c3a-1a1f9a2b3c4d",
+                                "name": "Cowrie Honeypot - Successful Login",
+                                "level": 12,
+                                "size": ">0",
+                                "active": true,
+                                "rule": "{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"query_string\": {\n            \"query\": \"data.eventid:cowrie.login.success\",\n            \"analyze_wildcard\": true\n          }\n        }\n      ],\n      \"filter\": [\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{ startime }}\",\n              \"lte\": \"{{ endtime }}\",\n              \"format\": \"epoch_second\"\n            }\n          }\n        }\n      ]\n    }\n  }\n}",
+                                "author": [
+                                    "KyloLab SOC"
+                                ],
+                                "group": "cowrie",
+                                "tags": [
+                                    "attack.initial_access",
+                                    "attack.t1078"
+                                ],
+                                "data": {
+                                    "source_sigma_id": "7e1a9e10-1b2a-4b1e-9c3a-1a1f9a2b3c4d"
+                                },
+                                "description": "T-Pot Cowrie honeypot'una ba\u015far\u0131l\u0131 bir SSH/Telnet giri\u015fi tespit edildi.\nBu, sadece kaba kuvvet denemesi de\u011fil, sald\u0131rgan\u0131n ger\u00e7ekten (honeypot'un\nsundu\u011fu) kimlik bilgilerini do\u011fru tahmin etti\u011fi/kulland\u0131\u011f\u0131 anlam\u0131na gelir.\nBa\u015far\u0131s\u0131z denemelere k\u0131yasla \u00e7ok daha nadir ve \u00f6nem derecesi daha y\u00fcksektir.",
+                                "detector": null,
+                                "path": "/opt/clickdetect/rules/cowrie/cowrie_login_success.yml",
+                                "sigma": false
+                            },
+                            "data": {
+                                "len": 1,
+                                "value": [
+                                    {
+                                        "_id": "eF5dTJ8B-TAPKAoDvkuc",
+                                        "_index": "wazuh-alerts-4.x-2026.07.10",
+                                        "agent": {
+                                            "ip": "10.0.0.X",
+                                            "name": "tpot-honeypot",
+                                            "id": "001"
+                                        },
+                                        "manager": {
+                                            "name": "sysadmin"
+                                        },
+                                        "data": {
+                                            "src_ip": "103.141.5.140",
+                                            "eventid": "cowrie.login.success",
+                                            "protocol": "telnet",
+                                            "password": "1234",
+                                            "session": "6188950c0588",
+                                            "sensor": "56911959376d",
+                                            "message": "login attempt [support/1234] succeeded",
+                                            "uuid": "fd73d467-7c68-11f1-99a8-429af5364d57",
+                                            "username": "support",
+                                            "timestamp": "2026-07-10T14:10:38.299283Z"
+                                        },
+                                        "rule": {
+                                            "firedtimes": 1,
+                                            "mail": true,
+                                            "level": 14,
+                                            "description": "         TPOT Cowrie SSH/Telnet successful login from 103.141.5.140 as support\n    ",
+                                            "groups": [
+                                                "tpot",
+                                                "honeypot",
+                                                "tpot",
+                                                "honeypot",
+                                                "authentication_success",
+                                                "attack"
+                                            ],
+                                            "mitre": {
+                                                "technique": [
+                                                    "Valid Accounts"
+                                                ],
+                                                "id": [
+                                                    "T1078"
+                                                ],
+                                                "tactic": [
+                                                    "Defense Evasion",
+                                                    "Persistence",
+                                                    "Privilege Escalation",
+                                                    "Initial Access"
+                                                ]
+                                            },
+                                            "id": "100104"
+                                        },
+                                        "decoder": {
+                                            "name": "json"
+                                        },
+                                        "full_log": "{\"eventid\":\"cowrie.login.success\",\"username\":\"support\",\"password\":\"1234\",\"message\":\"login attempt [support/1234] succeeded\",\"sensor\":\"56911959376d\",\"uuid\":\"fd73d467-7c68-11f1-99a8-429af5364d57\",\"timestamp\":\"2026-07-10T14:10:38.299283Z\",\"src_ip\":\"103.141.5.140\",\"session\":\"6188950c0588\",\"protocol\":\"telnet\"}",
+                                        "input": {
+                                            "type": "log"
+                                        },
+                                        "@timestamp": "2026-07-10T14:10:38.553Z",
+                                        "location": "/home/ubuntu/tpotce/data/cowrie/log/cowrie.json",
+                                        "id": "1783692638.30898384",
+                                        "timestamp": "2026-07-10T14:10:38.553+0000"
+                                    }
+                                ],
+                                "datasource": "opensearch"
+                            },
+                            "detector": {
+                                "name": "Cowrie honeypot \u00f6zel kurallar\u0131",
+                                "for_time": "5m",
+                                "description": "T-Pot'a \u00f6zel yaz\u0131lan Cowrie kurallar\u0131 (ba\u015far\u0131l\u0131 giri\u015f, malware staging, dosya indirme)",
+                                "rules": [
+                                    "/opt/clickdetect/rules/cowrie/*.yml"
+                                ],
+                                "webhooks": [
+                                    "n8n_generic"
+                                ],
+                                "data": null,
+                                "tenant": "kylolab",
+                                "active": true,
+                                "datasource": {
+                                    "type": "opensearch",
+                                    "url": "https://localhost:9200",
+                                    "index": "wazuh-alerts-4.x-*",
+                                    "verify": false
+                                },
+                                "sigma": false
+                            },
+                            "time": {
+                                "startime": 1783692489.119213,
+                                "endtime": 1783692789.119157
+                            }
+                        },
+                        "webhookUrl": "http://localhost:5678/webhook/clickdetect",
+                        "executionMode": "production"
+                    }
+                }
+            ]
+        },
+        "versionId": "de9be566-0457-4ce6-9318-7b9b3a61fe06",
+        "activeVersionId": "295e7c05-a17b-4556-acce-d0c0ae8e9f8c",
+        "versionCounter": 6,
+        "triggerCount": 1,
+        "sourceWorkflowId": null,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-07-09T18:49:14.745Z",
+                "createdAt": "2026-07-09T18:49:14.745Z",
+                "role": "workflow:owner",
+                "workflowId": "DsTkv4FNiEW0O7HF",
+                "projectId": "nBkpLvwV39z07BX7",
+                "project": {
+                    "updatedAt": "2026-07-09T17:38:27.860Z",
+                    "createdAt": "2026-07-09T17:25:17.617Z",
+                    "id": "nBkpLvwV39z07BX7",
+                    "name": "Akin Farfar <redacted@example.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "customTelemetryTags": [],
+                    "creatorId": "8027f9fa-3502-49b7-9539-2aae32536357"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    }
+]
