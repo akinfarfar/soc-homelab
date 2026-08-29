@@ -213,7 +213,7 @@
     <group>misp_error,</group>
   </rule>
 
-  <rule id="100602" level="12">
+  <rule id="100602" level="12" ignore="3600">
     <if_sid>100600</if_sid>
     <field name="misp.status">^match$</field>
     <description>MISP - IoC match: $(misp.checked_ip) found in event $(misp.event_id) - category $(misp.category)</description>
@@ -223,5 +223,105 @@
       <id>T1071</id>
     </mitre>
   </rule>
+  <rule id="100321" level="0">
+    <if_sid>100013</if_sid>
+    <field name="subtype">^local$</field>
+    <description>FortiGate: Cihazin kendi rutin cikis trafigi (bastirildi)</description>
+  </rule>
+
+  <rule id="100320" level="0">
+    <if_sid>100013</if_sid>
+    <field name="policyname">^internal-to-wan$</field>
+    <description>FortiGate: Rutin WAN cikis trafigi (bastirildi)</description>
+  </rule>
+
+  <rule id="110001" level="12">
+    <if_sid>86600</if_sid>
+    <decoded_as>json</decoded_as>
+    <field name="msg">SUNNYDAY_CANARY</field>
+    <field name="event_type">canary</field>
+    <description>SunnyDay canary event</description>
+  </rule>
+
+  <rule id="110010" level="10">
+    <match>key="sunnyday_audit"</match>
+    <description>SunnyDay audit canary</description>
+  </rule>
+
 </group>
 
+
+<group name="health_monitor,">
+
+  <rule id="100300" level="3">
+    <decoded_as>json</decoded_as>
+    <field name="service">\.+</field>
+    <field name="host">\.+</field>
+    <description>Health Monitor: $(service)@$(host) durum: $(svc_status)</description>
+  </rule>
+
+  <rule id="100301" level="12">
+    <if_sid>100300</if_sid>
+    <field name="svc_status" negate="yes">^active$</field>
+    <description>KRITIK: $(service)@$(host) servisi SAGLIKSIZ - durum: $(svc_status)</description>
+    <group>health_down,</group>
+  </rule>
+
+</group>
+
+<group name="suricata_severity,">
+
+  <rule id="100310" level="0">
+    <if_sid>86601</if_sid>
+    <field name="alert.severity">^3$</field>
+    <description>Suricata: Bilgilendirici seviye - bastirildi</description>
+  </rule>
+
+  <rule id="100311" level="6">
+    <if_sid>86601</if_sid>
+    <field name="alert.severity">^2$</field>
+    <description>Suricata: Orta seviye - $(alert.signature)</description>
+  </rule>
+
+  <rule id="100312" level="10" ignore="3600">
+    <if_sid>86601</if_sid>
+    <field name="alert.severity">^1$</field>
+    <description>Suricata: YUKSEK seviye - $(alert.signature)</description>
+  </rule>
+
+</group>
+
+<group name="resource_monitor,">
+
+  <rule id="100330" level="3">
+    <decoded_as>json</decoded_as>
+    <field name="check_kind">^resource$</field>
+    <description>Kaynak izleme: $(res_name)@$(host) durum: $(svc_status) (deger: $(res_value))</description>
+  </rule>
+
+  <rule id="100331" level="8">
+    <if_sid>100330</if_sid>
+    <field name="svc_status">^warning$</field>
+    <description>UYARI: $(res_name)@$(host) esik asildi - deger: $(res_value)</description>
+    <group>resource_warning,</group>
+  </rule>
+
+  <rule id="100332" level="13">
+    <if_sid>100330</if_sid>
+    <field name="svc_status">^critical$</field>
+    <description>KRITIK: $(res_name)@$(host) kritik esik asildi - deger: $(res_value)</description>
+    <group>resource_critical,</group>
+  </rule>
+
+</group>
+
+
+
+<group name="case_manager,">
+  <rule id="100340" level="3">
+    <decoded_as>json</decoded_as>
+    <field name="case_id">\.+</field>
+    <field name="case_status">\.+</field>
+    <description>Vaka Yoneticisi: #$(case_id) - $(host) - $(rule_id) - durum: $(case_status)</description>
+  </rule>
+</group>
