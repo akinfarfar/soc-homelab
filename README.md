@@ -140,8 +140,11 @@ soc-homelab/
 │   │                              # tpot_install, wazuh_ufw_hardening,
 │   │                              # wazuh_custom_rules (+ clickdetect_examples/),
 │   │                              # health_monitor, case_manager,
-│   │                              # clickdetect_llm_triage, nxlog_windows_telemetry,
-│   │                              # fortigate_admin_ip, ...
+│   │                              # clickdetect_llm_triage, fortigate_admin_ip, ...
+│   │   └── nxlog_windows_telemetry/
+│   │       └── files/
+│   │           ├── nxlog.conf            # NXLog CE config (Sysmon -> syslog/601/tcp)
+│   │           └── wazuh_remote_601.xml  # Wazuh Manager <remote> bloğu referansı
 │   └── playbooks/
 ├── configs/
 │   ├── systemd/                  # wazuh-manager auto-restart override
