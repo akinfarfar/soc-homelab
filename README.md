@@ -53,6 +53,9 @@ Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unu
                             Health Monitor (bağımsız nabız kontrolü) ─┐
                                       │                                │
                             Case Manager (SQLite, otomatik/manuel kapatma)
+
+   Windows Server VM (Azure, zaman-sınırlı test host'u) ──(Sysmon+NXLog CE,
+   syslog/601/tcp)──► Wazuh SIEM
 ```
 
 Detaylı topoloji diyagramı `docs/diagrams/architecture.mmd`'de (Mermaid) ve Medium serisindeki ilgili makalelerde yer alıyor.
@@ -79,7 +82,7 @@ Ansible ile Infrastructure as Code, age+sops ve ansible-vault ile secrets şifre
 eBPF tabanlı telemetri manipülasyonu tehdit modeli, `auditd`+Wazuh ile tespit katmanı, Docker/runc'un meşru `bpf()` kullanımı bulunduğunda önlemenin risk-temelli olarak izole bir VMware sandbox'ına ertelenmesi, ve dört katmanlı bir kaynak güven skorlama modelinin tasarlanması.
 
 ### 4- Operasyonel Olgunluk
-Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor katmanı (+ Wazuh Manager'dan tamamen bağımsız bir nabız kontrolü), log gürültüsü azaltma, MDR/EDR/XDR benzeri genişleme (Case Manager, LLM tabanlı alarm triaj, XDR zaman çizelgesi), "gözlemciyi kim izliyor?" sorusuna verilen gerçek bir cevap, ve periyodik bir güvenlik denetiminin (Aşama 1/2) kendi bulgularını bir sonraki adıma (CI'da otomatik secrets taraması) dönüştürmesi.
+Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor katmanı (+ Wazuh Manager'dan tamamen bağımsız bir nabız kontrolü), log gürültüsü azaltma, MDR/EDR/XDR benzeri genişleme (Case Manager, LLM tabanlı alarm triaj, XDR zaman çizelgesi), "gözlemciyi kim izliyor?" sorusuna verilen gerçek bir cevap, ve periyodik bir güvenlik denetiminin (Aşama 1/2) kendi bulgularını bir sonraki adıma (CI'da otomatik secrets taraması) dönüştürmesi. Ayrıca, ilk Windows endpoint telemetri kaynağı: zaman-sınırlı bir Azure Windows Server VM'i, Sysmon + NXLog Community Edition ile Wazuh'a syslog üzerinden telemetri gönderiyor — 4 özel MITRE ATT&CK eşlemeli tespit kuralı (PowerShell encoded command, certutil LOLBin, Office'ten shell açma, Sysmon kurcalama) yazılıp canlı olarak doğrulandı.
 
 ---
 
@@ -89,13 +92,14 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 |---|---|
 | SIEM / Tespit | Wazuh, Sigma Rules, ClickDetect, MITRE ATT&CK |
 | Honeypot / IDS | T-Pot (Cowrie, Dionaea, Heralding, H0neytr4p), Suricata |
+| Endpoint Telemetrisi | Sysmon (SwiftOnSecurity config), NXLog Community Edition |
 | Perimeter | FortiGate NGFW, Cloudflare WAF/Access, OCI Security List / NSG |
 | Tehdit İstihbaratı | MISP (+ CIRCL OSINT, Botvrij.eu), AbuseIPDB, Spamhaus |
 | Otomasyon / SOAR | n8n, Wazuh Active Response, Google Gemini (LLM triaj) |
 | Altyapı | Ansible, Docker, age + sops, ansible-vault, GPG |
 | CI / Güvenlik | GitHub Actions, gitleaks (her push'ta otomatik secrets taraması) |
 | Güvenlik Araştırması | auditd, bpftool, kernel lockdown, eBPF tehdit modellemesi |
-| Bulut | Oracle Cloud Infrastructure (ARM64/Always Free), Hetzner |
+| Bulut | Oracle Cloud Infrastructure (ARM64/Always Free), Hetzner, Azure (zaman-sınırlı Windows test host'u) |
 
 ---
 
@@ -112,6 +116,7 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 | Ağ segmentasyonu | 5 NSG, 53 kural |
 | Credential/IP/domain sızıntısı bulunup temizlenen | 2 API key (Faz 2) + 5 gerçek production IP + 1 domain adı (DNS üzerinden dolaylı IP sızıntısı) — `git-filter-repo` ile geçmiş temizliği + vault'a taşıma |
 | CI ile otomatikleştirilen kontrol | Her push'ta gitleaks secrets taraması (bkz. rozet yukarıda) |
+| Windows/Sysmon tespit kuralı | 4 (PowerShell obfuscation, LOLBin, Office-spawn, telemetri kurcalama — hepsi MITRE ATT&CK eşlemeli, canlı test edilmiş) |
 
 ---
 
@@ -140,7 +145,8 @@ soc-homelab/
 │   └── playbooks/
 ├── configs/
 │   ├── systemd/                  # wazuh-manager auto-restart override
-│   └── logrotate/                # health-monitor/case-manager log rotasyonu
+│   ├── logrotate/                # health-monitor/case-manager log rotasyonu
+│   └── nxlog/                    # NXLog CE config (Windows Sysmon -> Wazuh syslog)
 ├── dashboards/
 │   └── wazuh-dashboard-panels.ndjson  # Dashboard saved objects export
 ├── docs/
