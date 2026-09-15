@@ -325,3 +325,59 @@
     <description>Vaka Yoneticisi: #$(case_id) - $(host) - $(rule_id) - durum: $(case_status)</description>
   </rule>
 </group>
+
+<group name="windows_sysmon,">
+  <rule id="100700" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="SourceName">^Microsoft-Windows-Sysmon$</field>
+    <description>Sysmon olayi (Windows) - $(Hostname)</description>
+  </rule>
+
+  <rule id="100701" level="12">
+    <if_sid>100700</if_sid>
+    <field name="EventID">^1$</field>
+    <field name="CommandLine" type="pcre2">(?i)-enc(odedcommand)?\b</field>
+    <description>PowerShell encoded/obfuscated komut calistirildi - $(Hostname) - $(CommandLine)</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1027</id>
+    </mitre>
+    <group>windows_sysmon,powershell_obfuscation,</group>
+  </rule>
+
+  <rule id="100702" level="10">
+    <if_sid>100700</if_sid>
+    <field name="EventID">^1$</field>
+    <field name="Image" type="pcre2">(?i)certutil\.exe$</field>
+    <field name="CommandLine" type="pcre2">(?i)-urlcache|-decode</field>
+    <description>certutil LOLBin kotuye kullanimi (dosya indirme/decode) - $(Hostname) - $(CommandLine)</description>
+    <mitre>
+      <id>T1105</id>
+      <id>T1140</id>
+    </mitre>
+    <group>windows_sysmon,lolbin,</group>
+  </rule>
+
+  <rule id="100703" level="12">
+    <if_sid>100700</if_sid>
+    <field name="EventID">^1$</field>
+    <field name="ParentImage" type="pcre2">(?i)(winword|excel|powerpnt)\.exe$</field>
+    <field name="Image" type="pcre2">(?i)(cmd|powershell)\.exe$</field>
+    <description>Office uygulamasindan shell baslatildi (olasi makro-malware) - $(Hostname) - parent: $(ParentImage)</description>
+    <mitre>
+      <id>T1204.002</id>
+      <id>T1566.001</id>
+    </mitre>
+    <group>windows_sysmon,office_spawn,</group>
+  </rule>
+
+  <rule id="100704" level="13">
+    <if_sid>100700</if_sid>
+    <field name="EventID">^4$</field>
+    <description>Sysmon servis durumu degisti (olasi kurcalama/durdurma girisimi) - $(Hostname)</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>windows_sysmon,telemetry_tampering,</group>
+  </rule>
+</group>
