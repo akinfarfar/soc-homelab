@@ -1,8 +1,10 @@
 <!-- Wazuh Manager'in etc/ossec.conf dosyasina eklenmesi gereken blok.
-     NXLog'un gonderdigi Sysmon/syslog telemetrisini 601/tcp'den almak icin. -->
+     NXLog'un TLS (stunnel araciligiyla) gonderdigi Sysmon/syslog telemetrisini
+     almak icin. stunnel disaridan 6514/tls kabul edip yerel olarak bu porta
+     (601) iletir, bu yuzden allowed-ips localhost olmali. -->
 <remote>
   <connection>syslog</connection>
   <port>601</port>
   <protocol>tcp</protocol>
-  <allowed-ips>WINDOWS_ENDPOINT_IP</allowed-ips>
+  <allowed-ips>127.0.0.1</allowed-ips>
 </remote>
