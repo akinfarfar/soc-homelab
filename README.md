@@ -54,7 +54,8 @@ Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unu
                                       │                                │
                             Case Manager (SQLite, otomatik/manuel kapatma)
 
-   Windows Server VM (Azure) ──(Sysmon + NXLog CE, syslog/6514/tcp)──► Wazuh SIEM
+   Windows Server VM (Azure) ──(Sysmon + NXLog CE, gürültü filtreli)──►
+   stunnel (TLS/6514) ──► Wazuh SIEM (yerel syslog alıcısı, 127.0.0.1:601)
 ```
 
 Detaylı topoloji diyagramı `docs/diagrams/architecture.mmd`'de (Mermaid) ve Medium serisindeki ilgili makalelerde yer alıyor.
@@ -81,7 +82,7 @@ Ansible ile Infrastructure as Code, age+sops ve ansible-vault ile secrets şifre
 eBPF tabanlı telemetri manipülasyonu tehdit modeli, `auditd`+Wazuh ile tespit katmanı, Docker/runc'un meşru `bpf()` kullanımı bulunduğunda önlemenin risk-temelli olarak izole bir VMware sandbox'ına ertelenmesi, ve dört katmanlı bir kaynak güven skorlama modelinin tasarlanması.
 
 ### 4- Operasyonel Olgunluk
-Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor katmanı (+ Wazuh Manager'dan tamamen bağımsız bir nabız kontrolü), log gürültüsü azaltma, MDR/EDR/XDR benzeri genişleme (Case Manager, LLM tabanlı alarm triaj, XDR zaman çizelgesi), "gözlemciyi kim izliyor?" sorusuna verilen gerçek bir cevap, ve periyodik bir güvenlik denetiminin (Aşama 1/2) kendi bulgularını bir sonraki adıma (CI'da otomatik secrets taraması) dönüştürmesi. Ayrıca, ilk Windows endpoint telemetri kaynağı: bir Azure Windows Server VM'inde Sysmon + NXLog Community Edition kurulup Wazuh'a syslog üzerinden telemetri gönderecek şekilde yapılandırıldı — 4 özel MITRE ATT&CK eşlemeli tespit kuralı (PowerShell encoded command, certutil LOLBin, Office'ten shell açma, Sysmon kurcalama) yazılıp canlı olarak doğrulandı.
+Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor katmanı (+ Wazuh Manager'dan tamamen bağımsız bir nabız kontrolü), log gürültüsü azaltma, MDR/EDR/XDR benzeri genişleme (Case Manager, LLM tabanlı alarm triaj, XDR zaman çizelgesi), "gözlemciyi kim izliyor?" sorusuna verilen gerçek bir cevap, ve periyodik bir güvenlik denetiminin (Aşama 1/2) kendi bulgularını bir sonraki adıma (CI'da otomatik secrets taraması) dönüştürmesi. Ayrıca, ilk Windows endpoint telemetri kaynağı: bir Azure Windows Server VM'inde Sysmon + NXLog Community Edition kurulup Wazuh'a **stunnel üzerinden TLS ile (6514)** telemetri gönderecek şekilde yapılandırıldı — 4 özel MITRE ATT&CK eşlemeli tespit kuralı (PowerShell encoded command, certutil LOLBin, Office'ten shell açma, Sysmon kurcalama) yazılıp canlı olarak doğrulandı, ayrıca NXLog'un kendi bağlantı sağlığını izleyen ek bir tespit katmanı da eklendi.
 
 ---
 
@@ -91,7 +92,7 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 |---|---|
 | SIEM / Tespit | Wazuh, Sigma Rules, ClickDetect, MITRE ATT&CK |
 | Honeypot / IDS | T-Pot (Cowrie, Dionaea, Heralding, H0neytr4p), Suricata |
-| Endpoint Telemetrisi | Sysmon (SwiftOnSecurity config), NXLog Community Edition |
+| Endpoint Telemetrisi | Sysmon (SwiftOnSecurity config), NXLog Community Edition (TLS/stunnel ile şifreli) |
 | Perimeter | FortiGate NGFW, Cloudflare WAF/Access, OCI Security List / NSG |
 | Tehdit İstihbaratı | MISP (+ CIRCL OSINT, Botvrij.eu), AbuseIPDB, Spamhaus |
 | Otomasyon / SOAR | n8n, Wazuh Active Response, Google Gemini (LLM triaj) |
@@ -115,7 +116,7 @@ Günlük/haftalık triage disiplini, kendi kendini izleyen bir health-monitor ka
 | Ağ segmentasyonu | 5 NSG, 53 kural |
 | Credential/IP/domain sızıntısı bulunup temizlenen | 2 API key (Faz 2) + 5 gerçek production IP + 1 domain adı (DNS üzerinden dolaylı IP sızıntısı) — `git-filter-repo` ile geçmiş temizliği + vault'a taşıma |
 | CI ile otomatikleştirilen kontrol | Her push'ta gitleaks secrets taraması (bkz. rozet yukarıda) |
-| Windows/Sysmon tespit kuralı | 4 (PowerShell obfuscation, LOLBin, Office-spawn, telemetri kurcalama — hepsi MITRE ATT&CK eşlemeli, canlı test edilmiş) |
+| Windows/Sysmon tespit kuralı | 4 (PowerShell obfuscation, LOLBin, Office-spawn, telemetri kurcalama — hepsi MITRE ATT&CK eşlemeli, canlı test edilmiş) + NXLog'un kendi bağlantı sağlığını izleyen ek katman |
 
 ---
 
@@ -143,8 +144,10 @@ soc-homelab/
 │   │                              # clickdetect_llm_triage, fortigate_admin_ip, ...
 │   │   └── nxlog_windows_telemetry/
 │   │       └── files/
-│   │           ├── nxlog.conf            # NXLog CE config (Sysmon -> syslog/6514/tcp)
-│   │           └── wazuh_remote_6514.xml  # Wazuh Manager <remote> bloğu referansı
+│   │           ├── nxlog.conf            # NXLog CE config (om_ssl/TLS + gurultu filtresi)
+│   │           ├── wazuh_remote_601.xml  # Wazuh Manager <remote> blogu (localhost, stunnel arkasi)
+│   │           └── stunnel/
+│   │               └── stunnel.conf      # 6514/tls kabul edip yerelde 601'e iletir
 │   └── playbooks/
 ├── configs/
 │   ├── systemd/                  # wazuh-manager auto-restart override
@@ -182,7 +185,8 @@ Bu proje boyunca tekrar eden tema: **hiçbir güvenlik kontrolü, kendi başına
 - **"Sayaç sıfırsa, özellik çalışmıyor demek değildir"** — FortiGate'in IPS'i, var olmayan bir donanımı taklit ederek trafiği sessizce atlıyordu; `diagnose debug flow` ile paket seviyesinde teşhis edildi.
 - **"Bir önlemi uygulamadan önce sorgula"** — kernel lockdown'ı devreye almadan önce, Docker'ın kendi meşru `bpf()` kullanımı bulunup önleme katmanı sandbox doğrulamasına ertelendi.
 - **"Yerel bir servisin sağlıklı görünmesi, gerçekte çalıştığı anlamına gelmez"** — T-Pot'un agent'ı 7 saattir Manager'a bağlı değilken yerel `systemctl status` "active" gösteriyordu.
-- **"Gözlemciyi kim izliyor?"** — tüm alarm zincirinin tek dayanağı Wazuh Manager'ın kendisiydi; systemd auto-restart + tamamen bağımsız bir nabız kontrolüyle çözüldü.
+- **"Gözlemciyi kim izliyor?"** — tüm alarm zincirinin tek dayanağı Wazuh Manager'ın kendisiydi; systemd auto-restart + tamamen bağımsız bir nabız kontrolüyle çözüldü. Aynı ilke NXLog'un kendisine de uygulandı — NXLog'un kendi bağlantı durumu da ayrıca izleniyor.
+- **"İlk çalışan çözüm, en doğru çözüm değildir"** — Windows telemetrisi başta düz metin (plaintext) syslog ile taşınıyordu; sonradan stunnel ile TLS şifrelemesine geçildi ve NXLog seviyesinde gürültü filtresi eklendi.
 - **"Bir düzeltmenin daha önce yapılmış olması, kalıcı olduğu anlamına gelmez"** — git geçmişindeki bir IP sızıntısı temizliği daha önce bir kez yapılmış ama sessizce geri gelmişti; kalıcı çözüm otomasyon (CI'da gitleaks) oldu, elle kontrol değil.
 
 Bu kararların her birinin tam teknik dökümü (komutlar, hata mesajları, doğrulama adımları) Medium serisinde yer alıyor.
