@@ -54,7 +54,7 @@ Bu repo bir "nasıl kurulur" öğreticisi değil — gerçek bir üretim SOC'unu
                                       │                                │
                             Case Manager (SQLite, otomatik/manuel kapatma)
 
-   Windows Server VM (Azure) ──(Sysmon + NXLog CE, syslog/601/tcp)──► Wazuh SIEM
+   Windows Server VM (Azure) ──(Sysmon + NXLog CE, syslog/6514/tcp)──► Wazuh SIEM
 ```
 
 Detaylı topoloji diyagramı `docs/diagrams/architecture.mmd`'de (Mermaid) ve Medium serisindeki ilgili makalelerde yer alıyor.
@@ -143,8 +143,8 @@ soc-homelab/
 │   │                              # clickdetect_llm_triage, fortigate_admin_ip, ...
 │   │   └── nxlog_windows_telemetry/
 │   │       └── files/
-│   │           ├── nxlog.conf            # NXLog CE config (Sysmon -> syslog/601/tcp)
-│   │           └── wazuh_remote_601.xml  # Wazuh Manager <remote> bloğu referansı
+│   │           ├── nxlog.conf            # NXLog CE config (Sysmon -> syslog/6514/tcp)
+│   │           └── wazuh_remote_6514.xml  # Wazuh Manager <remote> bloğu referansı
 │   └── playbooks/
 ├── configs/
 │   ├── systemd/                  # wazuh-manager auto-restart override
