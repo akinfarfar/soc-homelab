@@ -79,3 +79,29 @@ oluşturulup temizlenmiş geçmiş push edildi.
 gelmez — eğer temizlik disiplini (pre-commit hook, CI kontrolü gibi) süreçselleştirilmezse,
 bir sonraki commit aynı hatayı sessizce geri getirebilir. Tek seferlik bir düzeltme,
 tekrarlayan bir kontrolle desteklenmedikçe kalıcı değildir.
+
+## Kriz #22 — Wazuh indexer diski doldu, 18 gün boyunca alarm indekslenmedi (30 Ekim 2026)
+**Bağlam:** Lab kapatılmadan önce son istatistikler indexer'dan çıkarılırken ortaya çıktı.
+**Semptom:** İndekslenen en son alarm 12 Ekim 11:05 (UTC) tarihliydi, oysa manager'ın
+`alerts.json` dosyası 30 Ekim'e kadar güncel yazılıyordu. Dört servis (manager, indexer,
+filebeat, dashboard) `systemctl` ile "active" görünüyordu; küme sarı (14 atanmamış shard).
+**Teşhis:** Kök diski 83 GB'ın 80 GB'ı dolu (%98). 20 `wazuh-alerts-*` indeksinin hepsinde
+read-only bloğu vardı (OpenSearch disk eşiği %95 aşılınca otomatik uyguluyor). Filebeat
+28 Ekim'de kendi log dosyasını bile yazamadı ("no space left on device"). İndexer dizini
+36 GB'ydı ama alarm indeksleri yalnızca 4,2 GB (4,58 milyon doküman); `wazuh-archives-4.x`
+20 indekste 33,7 GB (39,8 milyon doküman) tutuyordu. Ham `archives` dosyaları ayrıca
+diskte 9,9 GB yer kaplıyordu.
+**Kök neden:** `logall`/`logall_json` ve filebeat `archives` çıktısı açıktı; her ham olay
+indexer'a yazılıyordu. Alarm indeksleri için 20 günlük ISM saklama politikası vardı, ama
+archives hacmi (günde ~1,7 GB) için ayrı bir sınır, disk eşiği uyarısı ya da "son
+indekslenen alarmın yaşı" kontrolü yoktu. Bağımsız nabız kontrolü yalnızca manager'ın
+1514 portuna baktığı için sorunu göremedi; alarm e-postaları ClickDetect → n8n zincirinden
+geliyordu ve ClickDetect de indexer'dan okuduğu için yeni olay görmedi. Bu süredeki
+e-posta/ban kaybı beklenen sonuçtur ancak journal kaydıyla doğrulanamadı.
+**Çözüm:** Lab kapatılacağı için onarım uygulanmadı; olay belgelendi ve kapatma öncesi
+istatistikler diskteki mevcut indekslerden çıkarıldı. Uygulanacak düzeltme: archives
+çıktısını kapat (veya 3 günlük ayrı ISM politikası ekle), disk %80'de uyarı üret,
+`wazuh-alerts` için "son doküman yaşı" kontrolü ekle.
+**Ders:** Servislerin "active" görünmesi, hattın uçtan uca çalıştığını göstermez. Uyarı
+yolu, izlediği bileşenin kendisine bağlıysa (burada indexer) o bileşen düştüğünde uyarı da
+susar. Gözlemcinin gözlemcisi ayrı bir yoldan, çıktının tazeliğini ölçmelidir.
