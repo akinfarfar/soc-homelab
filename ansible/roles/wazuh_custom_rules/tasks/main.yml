@@ -67,18 +67,10 @@
     group: wazuh
     mode: '0750'
 
-- name: Insert MISP integration block into ossec.conf
+# MISP sunucusu 2026-10-30'da kapatildi; entegrasyon blogu kaldirilir (eski hali git gecmisinde).
+- name: Remove MISP integration block from ossec.conf (MISP retired)
   ansible.builtin.blockinfile:
     path: /var/ossec/etc/ossec.conf
     marker: "<!-- {mark} ANSIBLE MANAGED BLOCK: misp integration -->"
-    insertbefore: '</ossec_config>'
-    block: |
-      <integration>
-        <name>custom-misp</name>
-        <hook_url>{{ misp_base_url }}</hook_url>
-        <api_key>{{ misp_api_key }}</api_key>
-        <level>7</level>
-        <alert_format>json</alert_format>
-      </integration>
+    state: absent
   notify: restart wazuh-manager
-  no_log: true
