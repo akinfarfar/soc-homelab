@@ -96,8 +96,10 @@ indexer'a yazılıyordu. Alarm indeksleri için 20 günlük ISM saklama politika
 archives hacmi (günde ~1,7 GB) için ayrı bir sınır, disk eşiği uyarısı ya da "son
 indekslenen alarmın yaşı" kontrolü yoktu. Bağımsız nabız kontrolü yalnızca manager'ın
 1514 portuna baktığı için sorunu göremedi; alarm e-postaları ClickDetect → n8n zincirinden
-geliyordu ve ClickDetect de indexer'dan okuduğu için yeni olay görmedi. Bu süredeki
-e-posta/ban kaybı beklenen sonuçtur ancak journal kaydıyla doğrulanamadı.
+geliyordu ve ClickDetect de indexer'dan okuduğu için yeni olay görmedi. ClickDetect journal'ı
+23 Ekim'e kadar geriye gidiyor; o tarihten 30 Ekim'e kadar 7 günde hiç webhook
+gönderilmedi, oysa detector 5 dakikada bir hatasız çalışıyordu (hata değil, sessizlik).
+12-23 Ekim arası journal'da olmadığından bu aralık doğrulanamadı.
 **Çözüm:** Lab kapatılacağı için onarım uygulanmadı; olay belgelendi ve kapatma öncesi
 istatistikler diskteki mevcut indekslerden çıkarıldı. Uygulanacak düzeltme: archives
 çıktısını kapat (veya 3 günlük ayrı ISM politikası ekle), disk %80'de uyarı üret,
